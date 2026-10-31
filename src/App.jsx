@@ -100,7 +100,7 @@ function App() {
     })
   })
 
-  useEffect(() => {pi = window.api
+  useEffect(() => {
     const editorScroller = editorRef.current?.view?.scrollDOM
     const preview = previewRef.current
     if (!isSplit || !editorScroller || !preview) return
