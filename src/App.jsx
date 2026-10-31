@@ -1,20 +1,50 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './App.css'
 
 const api = window.api
 
+const MODES = [
+  { id: 'edit', label: 'Редактор' },
+  { id: 'split', label: 'Разделить' },
+  { id: 'preview', label: 'Предпросмотр' },
+]
+
 function getFileName(filePath) {
   return filePath ? filePath.split(/[\\/]/).pop() : 'Без названия'
+}
+
+function isMarkdownFile(filePath) {
+  return Boolean(filePath) && /\.md$/i.test(filePath)
+}
+
+function syncScroll(from, to) {
+  const fromMax = from.scrollHeight - from.clientHeight
+  const toMax = to.scrollHeight - to.clientHeight
+  if (fromMax <= 0 || toMax <= 0) return
+
+  const target = (from.scrollTop / fromMax) * toMax
+  if (Math.abs(to.scrollTop - target) > 1) to.scrollTop = target
 }
 
 function App() {
   const [text, setText] = useState('')
   const [savedText, setSavedText] = useState('')
   const [filePath, setFilePath] = useState(null)
+  const [mode, setMode] = useState('edit')
+
+  const editorRef = useRef(null)
+  const previewRef = useRef(null)
 
   const isDirty = text !== savedText
+  const isMarkdown = isMarkdownFile(filePath)
+  const currentMode = isMarkdown ? mode : 'edit'
+  const showEditor = currentMode !== 'preview'
+  const showPreview = currentMode !== 'edit'
+  const isSplit = currentMode === 'split'
 
   function confirmDiscard() {
     return !isDirty || window.confirm('Есть несохранённые изменения. Продолжить без сохранения?')
@@ -57,6 +87,22 @@ function App() {
     })
   })
 
+  useEffect(() => {
+    const editorScroller = editorRef.current?.view?.scrollDOM
+    const preview = previewRef.current
+    if (!isSplit || !editorScroller || !preview) return
+
+    const onEditorScroll = () => syncScroll(editorScroller, preview)
+    const onPreviewScroll = () => syncScroll(preview, editorScroller)
+
+    editorScroller.addEventListener('scroll', onEditorScroll)
+    preview.addEventListener('scroll', onPreviewScroll)
+    return () => {
+      editorScroller.removeEventListener('scroll', onEditorScroll)
+      preview.removeEventListener('scroll', onPreviewScroll)
+    }
+  }, [isSplit])
+
   return (
     <div className="app">
       <header className="toolbar">
@@ -65,19 +111,39 @@ function App() {
           <button type="button" onClick={openFile}>Открыть</button>
           <button type="button" onClick={() => saveFile(false)}>Сохранить</button>
           <button type="button" onClick={() => saveFile(true)}>Сохранить как</button>
+          {isMarkdown &&
+            MODES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                className={currentMode === id ? 'active' : ''}
+                aria-pressed={currentMode === id}
+                onClick={() => setMode(id)}
+              >
+                {label}
+              </button>
+            ))}
         </div>
         <span className="title">
           {getFileName(filePath)}
           {isDirty ? ' •' : ''}
         </span>
       </header>
-      <CodeMirror
-        className="editor"
-        value={text}
-        height="100%"
-        extensions={[markdown()]}
-        onChange={(value) => setText(value)}
-      />
+      <div className={`workspace${isSplit ? ' split' : ''}`}>
+        <CodeMirror
+          ref={editorRef}
+          className={`editor${showEditor ? '' : ' hidden'}`}
+          value={text}
+          height="100%"
+          extensions={[markdown()]}
+          onChange={(value) => setText(value)}
+        />
+        {showPreview && (
+          <div className="preview" ref={previewRef}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

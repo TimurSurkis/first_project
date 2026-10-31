@@ -31,12 +31,39 @@
   background: #f2f2f2;
 }
 
+.actions button.active {
+  background: #dfe9ff;
+  border-color: #8aa8e0;
+}
+
 .title {
   color: #555;
 }
 
-.editor {
+.workspace {
+  display: flex;
   flex: 1;
   min-height: 0;
+}
+
+.editor {
+  flex: 1;
+  min-width: 0;
   font-size: 16px;
+}
+
+.editor.hidden {
+  display: none;
+}
+
+.preview {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px 24px;
+  line-height: 1.6;
+}
+
+.workspace.split .preview {
+  border-left: 1px solid #ddd;
 }
