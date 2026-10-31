@@ -4,9 +4,13 @@ import { markdown } from '@codemirror/lang-markdown'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import StatusBar from './StatusBar.jsx'
+import FormatToolbar from './FormatToolbar.jsx'
+import { markdownKeymap } from './markdownCommands.js'
 import './App.css'
 
 const api = window.api
+
+const editorExtensions = [markdown(), markdownKeymap]
 
 const MODES = [
   { id: 'edit', label: 'Редактор' },
@@ -47,6 +51,13 @@ function App() {
   const showEditor = currentMode !== 'preview'
   const showPreview = currentMode !== 'edit'
   const isSplit = currentMode === 'split'
+
+  function runFormat(command) {
+    const view = editorRef.current?.view
+    if (!view) return
+    command(view)
+    view.focus()
+  }
 
   function confirmDiscard() {
     return !isDirty || window.confirm('Есть несохранённые изменения. Продолжить без сохранения?')
@@ -131,13 +142,14 @@ function App() {
           {isDirty ? ' •' : ''}
         </span>
       </header>
+      {isMarkdown && showEditor && <FormatToolbar onRun={runFormat} />}
       <div className={`workspace${isSplit ? ' split' : ''}`}>
         <CodeMirror
           ref={editorRef}
           className={`editor${showEditor ? '' : ' hidden'}`}
           value={text}
           height="100%"
-          extensions={[markdown()]}
+          extensions={editorExtensions}
           onChange={(value) => setText(value)}
           onUpdate={(update) => {
             const head = update.state.selection.main.head

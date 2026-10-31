@@ -31,6 +31,29 @@
   background: #f2f2f2;
 }
 
+.formatbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-bottom: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.formatbar button,
+.formatbar select {
+  padding: 3px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.formatbar button:hover {
+  background: #f2f2f2;
+}
+
 .actions button.active {
   background: #dfe9ff;
   border-color: #8aa8e0;
