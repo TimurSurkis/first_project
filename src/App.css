@@ -7,9 +7,32 @@
 .toolbar {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 8px 16px;
   border-bottom: 1px solid #ddd;
   font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: #f2f2f2;
+}
+
+.title {
+  color: #555;
 }
 
 .editor {
