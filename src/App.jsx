@@ -3,6 +3,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import StatusBar from './StatusBar.jsx'
 import './App.css'
 
 const api = window.api
@@ -35,6 +36,7 @@ function App() {
   const [savedText, setSavedText] = useState('')
   const [filePath, setFilePath] = useState(null)
   const [mode, setMode] = useState('edit')
+  const [cursor, setCursor] = useState({ line: 1, col: 1 })
 
   const editorRef = useRef(null)
   const previewRef = useRef(null)
@@ -87,7 +89,7 @@ function App() {
     })
   })
 
-  useEffect(() => {
+  useEffect(() => {pi = window.api
     const editorScroller = editorRef.current?.view?.scrollDOM
     const preview = previewRef.current
     if (!isSplit || !editorScroller || !preview) return
@@ -137,6 +139,11 @@ function App() {
           height="100%"
           extensions={[markdown()]}
           onChange={(value) => setText(value)}
+          onUpdate={(update) => {
+            const head = update.state.selection.main.head
+            const line = update.state.doc.lineAt(head)
+            setCursor({ line: line.number, col: head - line.from + 1 })
+          }}
         />
         {showPreview && (
           <div className="preview" ref={previewRef}>
@@ -144,6 +151,7 @@ function App() {
           </div>
         )}
       </div>
+      <StatusBar text={text} cursor={cursor} format={isMarkdown ? 'Markdown' : 'Обычный текст'} />
     </div>
   )
 }
