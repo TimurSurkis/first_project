@@ -8,6 +8,7 @@ import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
 import { markdownKeymap } from './markdownCommands.js'
+import { accentEditorTheme } from './editorTheme.js'
 import { loadSettings, saveSettings } from './settings.js'
 import './App.css'
 
@@ -49,8 +50,13 @@ function App() {
   const previewRef = useRef(null)
 
   const extensions = useMemo(
-    () => [markdown(), markdownKeymap, settings.lineWrapping ? EditorView.lineWrapping : []],
-    [settings.lineWrapping],
+    () => [
+      markdown(),
+      markdownKeymap,
+      accentEditorTheme(settings.accentColor),
+      settings.lineWrapping ? EditorView.lineWrapping : [],
+    ],
+    [settings.lineWrapping, settings.accentColor],
   )
   const basicSetup = useMemo(() => ({ tabSize: settings.tabSize }), [settings.tabSize])
   const handleCursorUpdate = useCallback((update) => {
@@ -108,18 +114,13 @@ function App() {
   useEffect(() => {
     saveSettings(settings)
     document.documentElement.dataset.theme = settings.theme
+    document.documentElement.style.setProperty('--accent', settings.accentColor)
   }, [settings])
 
   function updateSettings(patch) {
     setSettings((current) => ({ ...current, ...patch }))
   }
 
-  function toggleTheme() {
-    setSettings((current) => ({
-      ...current,
-      theme: current.theme === 'dark' ? 'light' : 'dark',
-    }))
-  }
 
   useEffect(() => {
     return api.onMenuCommand((command) => {
@@ -127,7 +128,6 @@ function App() {
       if (command === 'open') openFile()
       if (command === 'save') saveFile(false)
       if (command === 'save-as') saveFile(true)
-      if (command === 'toggle-theme') toggleTheme()
     })
   })
 
@@ -155,7 +155,6 @@ function App() {
           <button type="button" onClick={openFile}>Открыть</button>
           <button type="button" onClick={() => saveFile(false)}>Сохранить</button>
           <button type="button" onClick={() => saveFile(true)}>Сохранить как</button>
-          <button type="button" onClick={toggleTheme}>Тема</button>
           <button type="button" onClick={() => setShowSettings(true)}>Настройки</button>
           {isMarkdown &&
             MODES.map(({ id, label }) => (

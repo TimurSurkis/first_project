@@ -1,4 +1,4 @@
-import { FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
+import { ACCENT_COLORS, FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
 
 function SettingsDialog({ settings, onChange, onClose }) {
   return (
@@ -21,6 +21,20 @@ function SettingsDialog({ settings, onChange, onClose }) {
             {THEMES.map((theme) => (
               <option key={theme.value} value={theme.value}>
                 {theme.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Цвет акцента</span>
+          <select
+            value={settings.accentColor}
+            onChange={(event) => onChange({ accentColor: event.target.value })}
+          >
+            {ACCENT_COLORS.map((color) => (
+              <option key={color.value} value={color.value}>
+                {color.label}
               </option>
             ))}
           </select>

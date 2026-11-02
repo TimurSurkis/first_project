@@ -89,6 +89,16 @@
   line-height: 1.6;
 }
 
+.preview a {
+  color: var(--accent);
+}
+
+.actions button:focus-visible,
+.formatbar button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .preview code,
 .preview pre {
   background: var(--code-bg);
