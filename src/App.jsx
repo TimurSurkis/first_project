@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
+import { EditorView } from '@codemirror/view'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
+import SettingsDialog from './SettingsDialog.jsx'
 import { markdownKeymap } from './markdownCommands.js'
+import { loadSettings, saveSettings } from './settings.js'
 import './App.css'
 
 const api = window.api
-
-const editorExtensions = [markdown(), markdownKeymap]
 
 const MODES = [
   { id: 'edit', label: 'Редактор' },
@@ -41,9 +42,22 @@ function App() {
   const [filePath, setFilePath] = useState(null)
   const [mode, setMode] = useState('edit')
   const [cursor, setCursor] = useState({ line: 1, col: 1 })
+  const [settings, setSettings] = useState(loadSettings)
+  const [showSettings, setShowSettings] = useState(false)
 
   const editorRef = useRef(null)
   const previewRef = useRef(null)
+
+  const extensions = useMemo(
+    () => [markdown(), markdownKeymap, settings.lineWrapping ? EditorView.lineWrapping : []],
+    [settings.lineWrapping],
+  )
+  const basicSetup = useMemo(() => ({ tabSize: settings.tabSize }), [settings.tabSize])
+  const handleCursorUpdate = useCallback((update) => {
+    const head = update.state.selection.main.head
+    const line = update.state.doc.lineAt(head)
+    setCursor({ line: line.number, col: head - line.from + 1 })
+  }, [])
 
   const isDirty = text !== savedText
   const isMarkdown = isMarkdownFile(filePath)
@@ -92,6 +106,14 @@ function App() {
   }, [isDirty])
 
   useEffect(() => {
+    saveSettings(settings)
+  }, [settings])
+
+  function updateSettings(patch) {
+    setSettings((current) => ({ ...current, ...patch }))
+  }
+
+  useEffect(() => {
     return api.onMenuCommand((command) => {
       if (command === 'new') newFile()
       if (command === 'open') openFile()
@@ -124,6 +146,7 @@ function App() {
           <button type="button" onClick={openFile}>Открыть</button>
           <button type="button" onClick={() => saveFile(false)}>Сохранить</button>
           <button type="button" onClick={() => saveFile(true)}>Сохранить как</button>
+          <button type="button" onClick={() => setShowSettings(true)}>Настройки</button>
           {isMarkdown &&
             MODES.map(({ id, label }) => (
               <button
@@ -143,19 +166,19 @@ function App() {
         </span>
       </header>
       {isMarkdown && showEditor && <FormatToolbar onRun={runFormat} />}
-      <div className={`workspace${isSplit ? ' split' : ''}`}>
+      <div
+        className={`workspace${isSplit ? ' split' : ''}`}
+        style={{ '--editor-font-size': `${settings.fontSize}px` }}
+      >
         <CodeMirror
           ref={editorRef}
           className={`editor${showEditor ? '' : ' hidden'}`}
           value={text}
           height="100%"
-          extensions={editorExtensions}
+          extensions={extensions}
+          basicSetup={basicSetup}
           onChange={(value) => setText(value)}
-          onUpdate={(update) => {
-            const head = update.state.selection.main.head
-            const line = update.state.doc.lineAt(head)
-            setCursor({ line: line.number, col: head - line.from + 1 })
-          }}
+          onUpdate={handleCursorUpdate}
         />
         {showPreview && (
           <div className="preview" ref={previewRef}>
@@ -164,6 +187,13 @@ function App() {
         )}
       </div>
       <StatusBar text={text} cursor={cursor} format={isMarkdown ? 'Markdown' : 'Обычный текст'} />
+      {showSettings && (
+        <SettingsDialog
+          settings={settings}
+          onChange={updateSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   )
 }
