@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -9,6 +8,7 @@ import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
 import { markdownKeymap } from './markdownCommands.js'
 import { accentEditorTheme } from './editorTheme.js'
+import { findLanguage } from './languages.js'
 import { loadSettings, saveSettings } from './settings.js'
 import './App.css'
 
@@ -49,14 +49,15 @@ function App() {
   const editorRef = useRef(null)
   const previewRef = useRef(null)
 
+  const language = findLanguage(filePath)
   const extensions = useMemo(
     () => [
-      markdown(),
-      markdownKeymap,
+      language.support(),
+      language.name === 'Markdown' ? markdownKeymap : [],
       accentEditorTheme(settings.accentColor),
       settings.lineWrapping ? EditorView.lineWrapping : [],
     ],
-    [settings.lineWrapping, settings.accentColor],
+    [language, settings.lineWrapping, settings.accentColor],
   )
   const basicSetup = useMemo(() => ({ tabSize: settings.tabSize }), [settings.tabSize])
   const handleCursorUpdate = useCallback((update) => {
@@ -196,7 +197,7 @@ function App() {
           </div>
         )}
       </div>
-      <StatusBar text={text} cursor={cursor} format={isMarkdown ? 'Markdown' : 'Обычный текст'} />
+      <StatusBar text={text} cursor={cursor} format={language.name} />
       {showSettings && (
         <SettingsDialog
           settings={settings}
