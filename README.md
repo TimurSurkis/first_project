@@ -70,6 +70,7 @@
 │   ├── main.jsx             # Точка входа React
 │   ├── EditableTitle.jsx    # Заголовок с названием файла, редактируемый по клику
 │   ├── FormatToolbar.jsx    # Панель форматирования Markdown
+│   ├── IconButton.jsx       # Общая кнопка с иконкой (react-icons, набор Lucide), подписью и подсказкой
 │   ├── markdownCommands.js  # Команды форматирования и горячие клавиши CodeMirror
 │   ├── StatusBar.jsx        # Статусная строка (позиция курсора, счётчики, язык)
 │   ├── SettingsDialog.jsx   # Диалог настроек редактора

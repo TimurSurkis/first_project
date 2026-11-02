@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LuFileText, LuPencil } from 'react-icons/lu'
 
 function EditableTitle({ name, isDirty, onRename }) {
   const [editing, setEditing] = useState(false)
@@ -46,8 +47,12 @@ function EditableTitle({ name, isDirty, onRename }) {
       title="Нажмите, чтобы переименовать"
       onClick={startEditing}
     >
-      {name}
-      {isDirty ? ' •' : ''}
+      <LuFileText aria-hidden="true" />
+      <span>
+        {name}
+        {isDirty ? ' •' : ''}
+      </span>
+      <LuPencil className="title-edit" aria-hidden="true" />
     </button>
   )
 }

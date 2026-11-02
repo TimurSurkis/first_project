@@ -1,5 +1,18 @@
 import { EditorSelection } from '@codemirror/state'
 import { keymap } from '@codemirror/view'
+import {
+  LuBold,
+  LuCode,
+  LuFileCode,
+  LuItalic,
+  LuLink,
+  LuList,
+  LuListOrdered,
+  LuQuote,
+  LuSquareCheck,
+  LuStrikethrough,
+  LuTable,
+} from 'react-icons/lu'
 
 const TABLE_TEMPLATE = '| Колонка 1 | Колонка 2 |\n| --- | --- |\n|  |  |'
 
@@ -108,27 +121,90 @@ function insertTable(view) {
 export const headingLevels = [1, 2, 3, 4, 5, 6]
 
 export const formatCommands = [
-  { label: 'Ж', title: 'Жирный (Ctrl+B)', key: 'Mod-b', run: (view) => toggleWrap(view, '**') },
-  { label: 'К', title: 'Курсив (Ctrl+I)', key: 'Mod-i', run: (view) => toggleWrap(view, '*') },
   {
-    label: 'З',
+    id: 'bold',
+    group: 'inline',
+    icon: LuBold,
+    title: 'Жирный (Ctrl+B)',
+    key: 'Mod-b',
+    run: (view) => toggleWrap(view, '**'),
+  },
+  {
+    id: 'italic',
+    group: 'inline',
+    icon: LuItalic,
+    title: 'Курсив (Ctrl+I)',
+    key: 'Mod-i',
+    run: (view) => toggleWrap(view, '*'),
+  },
+  {
+    id: 'strike',
+    group: 'inline',
+    icon: LuStrikethrough,
     title: 'Зачёркнутый (Ctrl+Shift+X)',
     key: 'Mod-Shift-x',
     run: (view) => toggleWrap(view, '~~'),
   },
-  { label: 'Код', title: 'Встроенный код (Ctrl+E)', key: 'Mod-e', run: (view) => toggleWrap(view, '`') },
-  { label: 'Список', title: 'Маркированный список', run: togglePrefix(/^- /, '- ') },
-  { label: '1. Список', title: 'Нумерованный список', run: toggleOrderedList },
-  { label: 'Цитата', title: 'Цитата (Ctrl+Shift+Q)', key: 'Mod-Shift-q', run: togglePrefix(/^> /, '> ') },
-  { label: 'Чекбокс', title: 'Чекбокс', run: togglePrefix(/^- \[[ xX]\] /, '- [ ] ') },
-  { label: 'Ссылка', title: 'Ссылка (Ctrl+K)', key: 'Mod-k', run: insertLink },
   {
-    label: 'Блок кода',
+    id: 'code',
+    group: 'inline',
+    icon: LuCode,
+    title: 'Встроенный код (Ctrl+E)',
+    key: 'Mod-e',
+    run: (view) => toggleWrap(view, '`'),
+  },
+  {
+    id: 'list',
+    group: 'block',
+    icon: LuList,
+    title: 'Маркированный список',
+    run: togglePrefix(/^- /, '- '),
+  },
+  {
+    id: 'ordered',
+    group: 'block',
+    icon: LuListOrdered,
+    title: 'Нумерованный список',
+    run: toggleOrderedList,
+  },
+  {
+    id: 'quote',
+    group: 'block',
+    icon: LuQuote,
+    title: 'Цитата (Ctrl+Shift+Q)',
+    key: 'Mod-Shift-q',
+    run: togglePrefix(/^> /, '> '),
+  },
+  {
+    id: 'checklist',
+    group: 'block',
+    icon: LuSquareCheck,
+    title: 'Чекбокс',
+    run: togglePrefix(/^- \[[ xX]\] /, '- [ ] '),
+  },
+  {
+    id: 'link',
+    group: 'insert',
+    icon: LuLink,
+    title: 'Ссылка (Ctrl+K)',
+    key: 'Mod-k',
+    run: insertLink,
+  },
+  {
+    id: 'codeblock',
+    group: 'insert',
+    icon: LuFileCode,
     title: 'Блок кода (Ctrl+Shift+C)',
     key: 'Mod-Shift-c',
     run: insertCodeBlock,
   },
-  { label: 'Таблица', title: 'Таблица', run: insertTable },
+  {
+    id: 'table',
+    group: 'insert',
+    icon: LuTable,
+    title: 'Таблица',
+    run: insertTable,
+  },
 ]
 
 export const markdownKeymap = keymap.of([

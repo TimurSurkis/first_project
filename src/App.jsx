@@ -3,6 +3,17 @@ import CodeMirror from '@uiw/react-codemirror'
 import { EditorView } from '@codemirror/view'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import {
+  LuColumns2,
+  LuEye,
+  LuFilePlus,
+  LuFolderOpen,
+  LuPenLine,
+  LuSave,
+  LuSaveAll,
+  LuSettings,
+} from 'react-icons/lu'
+import IconButton from './IconButton.jsx'
 import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
@@ -16,9 +27,9 @@ import './App.css'
 const api = window.api
 
 const MODES = [
-  { id: 'edit', label: 'Редактор' },
-  { id: 'split', label: 'Разделить' },
-  { id: 'preview', label: 'Предпросмотр' },
+  { id: 'edit', label: 'Редактор', icon: LuPenLine },
+  { id: 'split', label: 'Разделить', icon: LuColumns2 },
+  { id: 'preview', label: 'Предпросмотр', icon: LuEye },
 ]
 
 const DEFAULT_NAME = 'Без названия.txt'
@@ -189,26 +200,29 @@ function App() {
   return (
     <div className="app">
       <header className="toolbar">
-        <div className="actions">
-          <button type="button" onClick={newFile}>Новый</button>
-          <button type="button" onClick={openFile}>Открыть</button>
-          <button type="button" onClick={() => saveFile(false)}>Сохранить</button>
-          <button type="button" onClick={() => saveFile(true)}>Сохранить как</button>
-          <button type="button" onClick={() => setShowSettings(true)}>Настройки</button>
-          {isMarkdown &&
-            MODES.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                className={currentMode === id ? 'active' : ''}
-                aria-pressed={currentMode === id}
-                onClick={() => setMode(id)}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="toolbar-group">
+          <IconButton icon={LuFilePlus} label="Новый" onClick={newFile} />
+          <IconButton icon={LuFolderOpen} label="Открыть" onClick={openFile} />
+          <IconButton icon={LuSave} label="Сохранить" onClick={() => saveFile(false)} />
+          <IconButton icon={LuSaveAll} label="Сохранить как" onClick={() => saveFile(true)} />
         </div>
-        <EditableTitle name={docName} isDirty={isDirty} onRename={renameDocument} />
+        {isMarkdown && (
+          <div className="toolbar-group">
+            {MODES.map(({ id, label, icon }) => (
+              <IconButton
+                key={id}
+                icon={icon}
+                label={label}
+                pressed={currentMode === id}
+                onClick={() => setMode(id)}
+              />
+            ))}
+          </div>
+        )}
+        <div className="toolbar-end">
+          <EditableTitle name={docName} isDirty={isDirty} onRename={renameDocument} />
+          <IconButton icon={LuSettings} label="Настройки" onClick={() => setShowSettings(true)} />
+        </div>
       </header>
       {isMarkdown && showEditor && <FormatToolbar onRun={runFormat} />}
       <div
