@@ -4,10 +4,15 @@ export const DEFAULT_SETTINGS = {
   lineWrapping: false,
   fontSize: 16,
   tabSize: 4,
+  theme: 'light',
 }
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 22, 24, 28, 32]
 export const TAB_SIZES = [2, 4, 8]
+export const THEMES = [
+  { value: 'light', label: 'Светлая' },
+  { value: 'dark', label: 'Тёмная' },
+]
 
 export function loadSettings() {
   try {

@@ -81,6 +81,16 @@ function buildMenu() {
 				{ role: 'quit' },
 			],
 		},
+		{
+			label: 'Вид',
+			submenu: [
+				{
+					label: 'Переключить тему',
+					accelerator: 'CmdOrCtrl+Shift+T',
+					click: sendCommand('toggle-theme'),
+				},
+			],
+		},
 		{ role: 'editMenu' },
 	]);
 }

@@ -107,10 +107,18 @@ function App() {
 
   useEffect(() => {
     saveSettings(settings)
+    document.documentElement.dataset.theme = settings.theme
   }, [settings])
 
   function updateSettings(patch) {
     setSettings((current) => ({ ...current, ...patch }))
+  }
+
+  function toggleTheme() {
+    setSettings((current) => ({
+      ...current,
+      theme: current.theme === 'dark' ? 'light' : 'dark',
+    }))
   }
 
   useEffect(() => {
@@ -119,6 +127,7 @@ function App() {
       if (command === 'open') openFile()
       if (command === 'save') saveFile(false)
       if (command === 'save-as') saveFile(true)
+      if (command === 'toggle-theme') toggleTheme()
     })
   })
 
@@ -146,6 +155,7 @@ function App() {
           <button type="button" onClick={openFile}>Открыть</button>
           <button type="button" onClick={() => saveFile(false)}>Сохранить</button>
           <button type="button" onClick={() => saveFile(true)}>Сохранить как</button>
+          <button type="button" onClick={toggleTheme}>Тема</button>
           <button type="button" onClick={() => setShowSettings(true)}>Настройки</button>
           {isMarkdown &&
             MODES.map(({ id, label }) => (
@@ -177,6 +187,7 @@ function App() {
           height="100%"
           extensions={extensions}
           basicSetup={basicSetup}
+          theme={settings.theme}
           onChange={(value) => setText(value)}
           onUpdate={handleCursorUpdate}
         />

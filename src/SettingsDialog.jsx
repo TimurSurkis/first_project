@@ -1,4 +1,4 @@
-import { FONT_SIZES, TAB_SIZES } from './settings.js'
+import { FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
 
 function SettingsDialog({ settings, onChange, onClose }) {
   return (
@@ -11,6 +11,20 @@ function SettingsDialog({ settings, onChange, onClose }) {
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="settings-title">Настройки редактора</h2>
+
+        <label className="field">
+          <span>Тема</span>
+          <select
+            value={settings.theme}
+            onChange={(event) => onChange({ theme: event.target.value })}
+          >
+            {THEMES.map((theme) => (
+              <option key={theme.value} value={theme.value}>
+                {theme.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <label className="field">
           <span>Перенос длинных строк</span>
