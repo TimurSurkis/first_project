@@ -26,21 +26,42 @@ function registerIpcHandlers() {
 		return { filePath, content };
 	});
 
-	ipcMain.handle('file:save', async (_event, { content, filePath }) => {
-		let target = filePath;
+	ipcMain.handle(
+		'file:save',
+		async (_event, { content, filePath, defaultName }) => {
+			let target = filePath;
 
-		if (!target) {
-			const { canceled, filePath: chosenPath } =
-				await dialog.showSaveDialog(mainWindow, {
-					defaultPath: 'Без названия.txt',
-					filters: TEXT_FILTERS,
-				});
-			if (canceled || !chosenPath) return null;
-			target = chosenPath;
+			if (!target) {
+				const { canceled, filePath: chosenPath } =
+					await dialog.showSaveDialog(mainWindow, {
+						defaultPath: defaultName,
+						filters: TEXT_FILTERS,
+					});
+				if (canceled || !chosenPath) return null;
+				target = chosenPath;
+			}
+
+			await fs.writeFile(target, content, 'utf8');
+			return { filePath: target };
+		},
+	);
+
+	ipcMain.handle('file:rename', async (_event, { filePath, newName }) => {
+		const target = path.join(path.dirname(filePath), newName);
+		if (target === filePath) return { filePath };
+
+		const exists = await fs.access(target).then(
+			() => true,
+			() => false,
+		);
+		if (exists) return { error: `Файл «${newName}» уже существует` };
+
+		try {
+			await fs.rename(filePath, target);
+			return { filePath: target };
+		} catch (error) {
+			return { error: error.message };
 		}
-
-		await fs.writeFile(target, content, 'utf8');
-		return { filePath: target };
 	});
 
 	ipcMain.on('doc:dirty', (_event, dirty) => {

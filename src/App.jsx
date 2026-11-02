@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
+import EditableTitle from './EditableTitle.jsx'
 import { markdownKeymap } from './markdownCommands.js'
 import { accentEditorTheme } from './editorTheme.js'
 import { findLanguage } from './languages.js'
@@ -20,12 +21,24 @@ const MODES = [
   { id: 'preview', label: 'Предпросмотр' },
 ]
 
-function getFileName(filePath) {
-  return filePath ? filePath.split(/[\\/]/).pop() : 'Без названия'
+const DEFAULT_NAME = 'Без названия.txt'
+
+function getBaseName(filePath) {
+  return filePath.split(/[\\/]/).pop()
 }
 
-function isMarkdownFile(filePath) {
-  return Boolean(filePath) && /\.md$/i.test(filePath)
+function isMarkdownFile(name) {
+  return /\.md$/i.test(name)
+}
+
+function normalizeFileName(input) {
+  const name = input.trim()
+  if (!name) return null
+  if (/[\\/:*?"<>|]/.test(name)) {
+    window.alert('Имя файла не может содержать символы \\ / : * ? " < > |')
+    return null
+  }
+  return /\.[^./\\]+$/.test(name) ? name : `${name}.md`
 }
 
 function syncScroll(from, to) {
@@ -41,6 +54,7 @@ function App() {
   const [text, setText] = useState('')
   const [savedText, setSavedText] = useState('')
   const [filePath, setFilePath] = useState(null)
+  const [docName, setDocName] = useState(DEFAULT_NAME)
   const [mode, setMode] = useState('edit')
   const [cursor, setCursor] = useState({ line: 1, col: 1 })
   const [settings, setSettings] = useState(loadSettings)
@@ -49,7 +63,7 @@ function App() {
   const editorRef = useRef(null)
   const previewRef = useRef(null)
 
-  const language = findLanguage(filePath)
+  const language = findLanguage(docName)
   const extensions = useMemo(
     () => [
       language.support(),
@@ -67,7 +81,7 @@ function App() {
   }, [])
 
   const isDirty = text !== savedText
-  const isMarkdown = isMarkdownFile(filePath)
+  const isMarkdown = isMarkdownFile(docName)
   const currentMode = isMarkdown ? mode : 'edit'
   const showEditor = currentMode !== 'preview'
   const showPreview = currentMode !== 'edit'
@@ -89,6 +103,7 @@ function App() {
     setText('')
     setSavedText('')
     setFilePath(null)
+    setDocName(DEFAULT_NAME)
   }
 
   async function openFile() {
@@ -98,14 +113,38 @@ function App() {
     setText(file.content)
     setSavedText(file.content)
     setFilePath(file.filePath)
+    setDocName(getBaseName(file.filePath))
   }
 
   async function saveFile(saveAs = false) {
     const content = text
-    const result = await api.saveFile({ content, filePath: saveAs ? null : filePath })
+    const result = await api.saveFile({
+      content,
+      filePath: saveAs ? null : filePath,
+      defaultName: docName,
+    })
     if (!result) return
     setFilePath(result.filePath)
+    setDocName(getBaseName(result.filePath))
     setSavedText(content)
+  }
+
+  async function renameDocument(input) {
+    const name = normalizeFileName(input)
+    if (!name || name === docName) return
+
+    if (!filePath) {
+      setDocName(name)
+      return
+    }
+
+    const result = await api.renameFile({ filePath, newName: name })
+    if (result.error) {
+      window.alert(result.error)
+      return
+    }
+    setFilePath(result.filePath)
+    setDocName(getBaseName(result.filePath))
   }
 
   useEffect(() => {
@@ -121,7 +160,6 @@ function App() {
   function updateSettings(patch) {
     setSettings((current) => ({ ...current, ...patch }))
   }
-
 
   useEffect(() => {
     return api.onMenuCommand((command) => {
@@ -170,10 +208,7 @@ function App() {
               </button>
             ))}
         </div>
-        <span className="title">
-          {getFileName(filePath)}
-          {isDirty ? ' •' : ''}
-        </span>
+        <EditableTitle name={docName} isDirty={isDirty} onRename={renameDocument} />
       </header>
       {isMarkdown && showEditor && <FormatToolbar onRun={runFormat} />}
       <div
