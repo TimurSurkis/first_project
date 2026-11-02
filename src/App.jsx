@@ -38,7 +38,7 @@ function normalizeFileName(input) {
     window.alert('Имя файла не может содержать символы \\ / : * ? " < > |')
     return null
   }
-  return /\.[^./\\]+$/.test(name) ? name : `${name}.md`
+  return /\.[^./\\]+$/.test(name) ? name : `${name}.txt`
 }
 
 function syncScroll(from, to) {
