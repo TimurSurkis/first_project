@@ -19,7 +19,7 @@ function SettingsDialog({ settings, onChange, onClose }) {
 
 		window.addEventListener('keydown', handleKeydown)
 		return () => window.removeEventListener('keydown', handleKeydown)
-	}, [])
+	}, [onClose])
 
 	return (
 		<div className="dialog-backdrop" onClick={onClose}>
@@ -62,18 +62,25 @@ function SettingsDialog({ settings, onChange, onClose }) {
 						<LuPalette aria-hidden="true" />
 						Цвет акцента
 					</span>
-					<select
-						value={settings.accentColor}
-						onChange={(event) =>
-							onChange({ accentColor: event.target.value })
-						}
-					>
-						{ACCENT_COLORS.map((color) => (
-							<option key={color.value} value={color.value}>
-								{color.label}
-							</option>
-						))}
-					</select>
+					<div className="field-control">
+						<span
+							className="accent-swatch"
+							style={{ background: settings.accentColor }}
+							aria-hidden="true"
+						/>
+						<select
+							value={settings.accentColor}
+							onChange={(event) =>
+								onChange({ accentColor: event.target.value })
+							}
+						>
+							{ACCENT_COLORS.map((color) => (
+								<option key={color.value} value={color.value}>
+									{color.label}
+								</option>
+							))}
+						</select>
+					</div>
 				</label>
 
 				<label className="field">
