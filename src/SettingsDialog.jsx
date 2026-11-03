@@ -8,8 +8,17 @@ import {
 	LuX,
 } from 'react-icons/lu'
 import IconButton from './IconButton.jsx'
+import Dropdown from './Dropdown.jsx'
 import { ACCENT_COLORS, FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
 import { useEffect } from 'react'
+
+const ACCENT_OPTIONS = ACCENT_COLORS.map((color) => ({
+	value: color.value,
+	label: color.label,
+	color: color.value,
+}))
+const FONT_SIZE_OPTIONS = FONT_SIZES.map((size) => ({ value: size, label: `${size} px` }))
+const TAB_SIZE_OPTIONS = TAB_SIZES.map((size) => ({ value: size, label: String(size) }))
 
 function SettingsDialog({ settings, onChange, onClose }) {
 	useEffect(() => {
@@ -38,50 +47,29 @@ function SettingsDialog({ settings, onChange, onClose }) {
 					<IconButton icon={LuX} title="Закрыть" onClick={onClose} />
 				</div>
 
-				<label className="field">
+				<div className="field">
 					<span className="field-label">
 						<LuSunMoon aria-hidden="true" />
 						Тема
 					</span>
-					<select
+					<Dropdown
+						options={THEMES}
 						value={settings.theme}
-						onChange={(event) =>
-							onChange({ theme: event.target.value })
-						}
-					>
-						{THEMES.map((theme) => (
-							<option key={theme.value} value={theme.value}>
-								{theme.label}
-							</option>
-						))}
-					</select>
-				</label>
+						onChange={(theme) => onChange({ theme })}
+					/>
+				</div>
 
-				<label className="field">
+				<div className="field">
 					<span className="field-label">
 						<LuPalette aria-hidden="true" />
 						Цвет акцента
 					</span>
-					<div className="field-control">
-						<span
-							className="accent-swatch"
-							style={{ background: settings.accentColor }}
-							aria-hidden="true"
-						/>
-						<select
-							value={settings.accentColor}
-							onChange={(event) =>
-								onChange({ accentColor: event.target.value })
-							}
-						>
-							{ACCENT_COLORS.map((color) => (
-								<option key={color.value} value={color.value}>
-									{color.label}
-								</option>
-							))}
-						</select>
-					</div>
-				</label>
+					<Dropdown
+						options={ACCENT_OPTIONS}
+						value={settings.accentColor}
+						onChange={(accentColor) => onChange({ accentColor })}
+					/>
+				</div>
 
 				<label className="field">
 					<span className="field-label">
@@ -97,43 +85,29 @@ function SettingsDialog({ settings, onChange, onClose }) {
 					/>
 				</label>
 
-				<label className="field">
+				<div className="field">
 					<span className="field-label">
 						<LuType aria-hidden="true" />
 						Размер шрифта
 					</span>
-					<select
+					<Dropdown
+						options={FONT_SIZE_OPTIONS}
 						value={settings.fontSize}
-						onChange={(event) =>
-							onChange({ fontSize: Number(event.target.value) })
-						}
-					>
-						{FONT_SIZES.map((size) => (
-							<option key={size} value={size}>
-								{size} px
-							</option>
-						))}
-					</select>
-				</label>
+						onChange={(fontSize) => onChange({ fontSize })}
+					/>
+				</div>
 
-				<label className="field">
+				<div className="field">
 					<span className="field-label">
 						<LuIndentIncrease aria-hidden="true" />
 						Размер табуляции (в пробелах)
 					</span>
-					<select
+					<Dropdown
+						options={TAB_SIZE_OPTIONS}
 						value={settings.tabSize}
-						onChange={(event) =>
-							onChange({ tabSize: Number(event.target.value) })
-						}
-					>
-						{TAB_SIZES.map((size) => (
-							<option key={size} value={size}>
-								{size}
-							</option>
-						))}
-					</select>
-				</label>
+						onChange={(tabSize) => onChange({ tabSize })}
+					/>
+				</div>
 			</div>
 		</div>
 	)
