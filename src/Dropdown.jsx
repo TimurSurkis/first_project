@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuCheck, LuChevronDown } from 'react-icons/lu'
 
-function Dropdown({ options, value, onChange, placeholder = 'Выберите', width }) {
+function Dropdown({ options, value, onChange, placeholder = '', width }) {
 	const [open, setOpen] = useState(false)
 	const [activeIndex, setActiveIndex] = useState(0)
 	const rootRef = useRef(null)

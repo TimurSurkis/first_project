@@ -2,13 +2,25 @@ const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
 
-const TEXT_FILTERS = [
-	{ name: 'Текстовые файлы', extensions: ['txt', 'md'] },
-	{ name: 'Все файлы', extensions: ['*'] },
-];
+const MESSAGES = {
+	ru: require('../locales/ru.json'),
+	en: require('../locales/en.json'),
+};
 
+let language = 'ru';
 let mainWindow = null;
 let hasUnsavedChanges = false;
+
+function t(key) {
+	return MESSAGES[language]?.[key] ?? MESSAGES.en[key] ?? key;
+}
+
+function textFilters() {
+	return [
+		{ name: t('dialog.textFiles'), extensions: ['txt', 'md'] },
+		{ name: t('dialog.allFiles'), extensions: ['*'] },
+	];
+}
 
 function registerIpcHandlers() {
 	ipcMain.handle('file:open', async () => {
@@ -16,7 +28,7 @@ function registerIpcHandlers() {
 			mainWindow,
 			{
 				properties: ['openFile'],
-				filters: TEXT_FILTERS,
+				filters: textFilters(),
 			},
 		);
 		if (canceled) return null;
@@ -35,7 +47,7 @@ function registerIpcHandlers() {
 				const { canceled, filePath: chosenPath } =
 					await dialog.showSaveDialog(mainWindow, {
 						defaultPath: defaultName,
-						filters: TEXT_FILTERS,
+						filters: textFilters(),
 					});
 				if (canceled || !chosenPath) return null;
 				target = chosenPath;
@@ -54,7 +66,7 @@ function registerIpcHandlers() {
 			() => true,
 			() => false,
 		);
-		if (exists) return { error: `Файл «${newName}» уже существует` };
+		if (exists) return { error: 'exists' };
 
 		try {
 			await fs.rename(filePath, target);
@@ -67,6 +79,12 @@ function registerIpcHandlers() {
 	ipcMain.on('doc:dirty', (_event, dirty) => {
 		hasUnsavedChanges = dirty;
 	});
+
+	ipcMain.on('app:set-language', (_event, nextLanguage) => {
+		if (!MESSAGES[nextLanguage] || nextLanguage === language) return;
+		language = nextLanguage;
+		Menu.setApplicationMenu(buildMenu());
+	});
 }
 
 function buildMenu() {
@@ -75,31 +93,31 @@ function buildMenu() {
 
 	return Menu.buildFromTemplate([
 		{
-			label: 'Файл',
+			label: t('menu.file'),
 			submenu: [
 				{
-					label: 'Новый',
+					label: t('menu.new'),
 					accelerator: 'CmdOrCtrl+N',
 					click: sendCommand('new'),
 				},
 				{
-					label: 'Открыть...',
+					label: t('menu.open'),
 					accelerator: 'CmdOrCtrl+O',
 					click: sendCommand('open'),
 				},
 				{ type: 'separator' },
 				{
-					label: 'Сохранить',
+					label: t('menu.save'),
 					accelerator: 'CmdOrCtrl+S',
 					click: sendCommand('save'),
 				},
 				{
-					label: 'Сохранить как...',
+					label: t('menu.saveAs'),
 					accelerator: 'CmdOrCtrl+Shift+S',
 					click: sendCommand('save-as'),
 				},
 				{ type: 'separator' },
-				{ role: 'quit' },
+				{ role: 'quit', label: t('menu.quit') },
 			],
 		},
 		{ role: 'editMenu' },
@@ -123,11 +141,11 @@ function createWindow() {
 
 		const choice = dialog.showMessageBoxSync(mainWindow, {
 			type: 'warning',
-			buttons: ['Отмена', 'Закрыть без сохранения'],
+			buttons: [t('dialog.cancel'), t('dialog.closeWithoutSaving')],
 			defaultId: 0,
 			cancelId: 0,
-			message: 'Есть несохранённые изменения',
-			detail: 'Закрыть окно без сохранения?',
+			message: t('dialog.unsavedTitle'),
+			detail: t('dialog.unsavedDetail'),
 		});
 		if (choice === 0) event.preventDefault();
 	});

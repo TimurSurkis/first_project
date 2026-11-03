@@ -14,8 +14,6 @@ import {
   LuTable,
 } from 'react-icons/lu'
 
-const TABLE_TEMPLATE = '| Колонка 1 | Колонка 2 |\n| --- | --- |\n|  |  |'
-
 function changeLines(view, transform) {
   const { state } = view
   const { from, to } = state.selection.main
@@ -33,7 +31,7 @@ function changeLines(view, transform) {
   return true
 }
 
-function toggleWrap(view, before, after = before, placeholder = 'текст') {
+function toggleWrap(view, before, after, placeholder) {
   const { state } = view
   const { from, to } = state.selection.main
   const selected = state.sliceDoc(from, to)
@@ -79,10 +77,10 @@ export function setHeading(view, level) {
   })
 }
 
-function insertLink(view) {
+function insertLink(view, placeholder) {
   const { state } = view
   const { from, to } = state.selection.main
-  const label = state.sliceDoc(from, to) || 'текст'
+  const label = state.sliceDoc(from, to) || placeholder
   const url = 'https://'
   const urlFrom = from + label.length + 3
 
@@ -105,114 +103,122 @@ function insertCodeBlock(view) {
   return true
 }
 
-function insertTable(view) {
+function insertTable(view, firstColumn, secondColumn) {
   const { state } = view
   const line = state.doc.lineAt(state.selection.main.from)
   const lead = line.text ? '\n\n' : ''
+  const table = `| ${firstColumn} | ${secondColumn} |\n| --- | --- |\n|  |  |`
   const start = line.to + lead.length + 2
 
   view.dispatch({
-    changes: { from: line.to, insert: lead + TABLE_TEMPLATE },
-    selection: EditorSelection.range(start, start + 'Колонка 1'.length),
+    changes: { from: line.to, insert: lead + table },
+    selection: EditorSelection.range(start, start + firstColumn.length),
   })
   return true
 }
 
 export const headingLevels = [1, 2, 3, 4, 5, 6]
 
-export const formatCommands = [
-  {
-    id: 'bold',
-    group: 'inline',
-    icon: LuBold,
-    title: 'Жирный (Ctrl+B)',
-    key: 'Mod-b',
-    run: (view) => toggleWrap(view, '**'),
-  },
-  {
-    id: 'italic',
-    group: 'inline',
-    icon: LuItalic,
-    title: 'Курсив (Ctrl+I)',
-    key: 'Mod-i',
-    run: (view) => toggleWrap(view, '*'),
-  },
-  {
-    id: 'strike',
-    group: 'inline',
-    icon: LuStrikethrough,
-    title: 'Зачёркнутый (Ctrl+Shift+X)',
-    key: 'Mod-Shift-x',
-    run: (view) => toggleWrap(view, '~~'),
-  },
-  {
-    id: 'code',
-    group: 'inline',
-    icon: LuCode,
-    title: 'Встроенный код (Ctrl+E)',
-    key: 'Mod-e',
-    run: (view) => toggleWrap(view, '`'),
-  },
-  {
-    id: 'list',
-    group: 'block',
-    icon: LuList,
-    title: 'Маркированный список',
-    run: togglePrefix(/^- /, '- '),
-  },
-  {
-    id: 'ordered',
-    group: 'block',
-    icon: LuListOrdered,
-    title: 'Нумерованный список',
-    run: toggleOrderedList,
-  },
-  {
-    id: 'quote',
-    group: 'block',
-    icon: LuQuote,
-    title: 'Цитата (Ctrl+Shift+Q)',
-    key: 'Mod-Shift-q',
-    run: togglePrefix(/^> /, '> '),
-  },
-  {
-    id: 'checklist',
-    group: 'block',
-    icon: LuSquareCheck,
-    title: 'Чекбокс',
-    run: togglePrefix(/^- \[[ xX]\] /, '- [ ] '),
-  },
-  {
-    id: 'link',
-    group: 'insert',
-    icon: LuLink,
-    title: 'Ссылка (Ctrl+K)',
-    key: 'Mod-k',
-    run: insertLink,
-  },
-  {
-    id: 'codeblock',
-    group: 'insert',
-    icon: LuFileCode,
-    title: 'Блок кода (Ctrl+Shift+C)',
-    key: 'Mod-Shift-c',
-    run: insertCodeBlock,
-  },
-  {
-    id: 'table',
-    group: 'insert',
-    icon: LuTable,
-    title: 'Таблица',
-    run: insertTable,
-  },
-]
+export function createFormatCommands(t) {
+  const text = t('format.textPlaceholder')
 
-export const markdownKeymap = keymap.of([
-  ...formatCommands
-    .filter((command) => command.key)
-    .map(({ key, run }) => ({ key, run })),
-  ...headingLevels.map((level) => ({
-    key: `Mod-Alt-${level}`,
-    run: (view) => setHeading(view, level),
-  })),
-])
+  return [
+    {
+      id: 'bold',
+      group: 'inline',
+      icon: LuBold,
+      title: t('format.bold'),
+      key: 'Mod-b',
+      run: (view) => toggleWrap(view, '**', '**', text),
+    },
+    {
+      id: 'italic',
+      group: 'inline',
+      icon: LuItalic,
+      title: t('format.italic'),
+      key: 'Mod-i',
+      run: (view) => toggleWrap(view, '*', '*', text),
+    },
+    {
+      id: 'strike',
+      group: 'inline',
+      icon: LuStrikethrough,
+      title: t('format.strike'),
+      key: 'Mod-Shift-x',
+      run: (view) => toggleWrap(view, '~~', '~~', text),
+    },
+    {
+      id: 'code',
+      group: 'inline',
+      icon: LuCode,
+      title: t('format.code'),
+      key: 'Mod-e',
+      run: (view) => toggleWrap(view, '`', '`', text),
+    },
+    {
+      id: 'list',
+      group: 'block',
+      icon: LuList,
+      title: t('format.list'),
+      run: togglePrefix(/^- /, '- '),
+    },
+    {
+      id: 'ordered',
+      group: 'block',
+      icon: LuListOrdered,
+      title: t('format.ordered'),
+      run: toggleOrderedList,
+    },
+    {
+      id: 'quote',
+      group: 'block',
+      icon: LuQuote,
+      title: t('format.quote'),
+      key: 'Mod-Shift-q',
+      run: togglePrefix(/^> /, '> '),
+    },
+    {
+      id: 'checklist',
+      group: 'block',
+      icon: LuSquareCheck,
+      title: t('format.checklist'),
+      run: togglePrefix(/^- \[[ xX]\] /, '- [ ] '),
+    },
+    {
+      id: 'link',
+      group: 'insert',
+      icon: LuLink,
+      title: t('format.link'),
+      key: 'Mod-k',
+      run: (view) => insertLink(view, text),
+    },
+    {
+      id: 'codeblock',
+      group: 'insert',
+      icon: LuFileCode,
+      title: t('format.codeBlock'),
+      key: 'Mod-Shift-c',
+      run: insertCodeBlock,
+    },
+    {
+      id: 'table',
+      group: 'insert',
+      icon: LuTable,
+      title: t('format.table'),
+      run: (view) =>
+        insertTable(view, t('format.tableColumn1'), t('format.tableColumn2')),
+    },
+  ]
+}
+
+export function createMarkdownKeymap(t) {
+  const commands = createFormatCommands(t)
+
+  return keymap.of([
+    ...commands.filter((command) => command.key).map(({ key, run }) => ({ key, run })),
+    ...headingLevels.map((level) => ({
+      key: `Mod-Alt-${level}`,
+      run: (view) => setHeading(view, level),
+    })),
+  ])
+}

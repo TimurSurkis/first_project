@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuFileText, LuPencil } from 'react-icons/lu'
+import { useTranslation } from './i18n/context.js'
 
 function EditableTitle({ name, isDirty, onRename }) {
+	const { t } = useTranslation()
 	const [editing, setEditing] = useState(false)
 	const [draft, setDraft] = useState(name)
 	const inputRef = useRef(null)
@@ -44,7 +46,7 @@ function EditableTitle({ name, isDirty, onRename }) {
 		<button
 			type="button"
 			className="title"
-			title="Нажмите, чтобы переименовать"
+			title={t('title.rename')}
 			onClick={startEditing}
 		>
 			<LuFileText aria-hidden="true" />

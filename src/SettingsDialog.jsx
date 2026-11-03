@@ -1,5 +1,6 @@
 import {
 	LuIndentIncrease,
+	LuLanguages,
 	LuPalette,
 	LuSettings,
 	LuSunMoon,
@@ -9,18 +10,31 @@ import {
 } from 'react-icons/lu'
 import IconButton from './IconButton.jsx'
 import Dropdown from './Dropdown.jsx'
+import { useTranslation } from './i18n/context.js'
+import { LANGUAGES } from './i18n/translate.js'
 import { ACCENT_COLORS, FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
-const ACCENT_OPTIONS = ACCENT_COLORS.map((color) => ({
-	value: color.value,
-	label: color.label,
-	color: color.value,
-}))
 const FONT_SIZE_OPTIONS = FONT_SIZES.map((size) => ({ value: size, label: `${size} px` }))
 const TAB_SIZE_OPTIONS = TAB_SIZES.map((size) => ({ value: size, label: String(size) }))
 
 function SettingsDialog({ settings, onChange, onClose }) {
+	const { t } = useTranslation()
+
+	const themeOptions = useMemo(
+		() => THEMES.map((theme) => ({ value: theme.value, label: t(theme.labelKey) })),
+		[t],
+	)
+	const accentOptions = useMemo(
+		() =>
+			ACCENT_COLORS.map((color) => ({
+				value: color.value,
+				label: t(color.labelKey),
+				color: color.value,
+			})),
+		[t],
+	)
+
 	useEffect(() => {
 		const handleKeydown = (e) => {
 			if (e.key === 'Escape') onClose()
@@ -42,18 +56,30 @@ function SettingsDialog({ settings, onChange, onClose }) {
 				<div className="dialog-header">
 					<h2 id="settings-title">
 						<LuSettings aria-hidden="true" />
-						Настройки редактора
+						{t('settings.title')}
 					</h2>
-					<IconButton icon={LuX} title="Закрыть" onClick={onClose} />
+					<IconButton icon={LuX} title={t('common.close')} onClick={onClose} />
+				</div>
+
+				<div className="field">
+					<span className="field-label">
+						<LuLanguages aria-hidden="true" />
+						{t('settings.language')}
+					</span>
+					<Dropdown
+						options={LANGUAGES}
+						value={settings.language}
+						onChange={(language) => onChange({ language })}
+					/>
 				</div>
 
 				<div className="field">
 					<span className="field-label">
 						<LuSunMoon aria-hidden="true" />
-						Тема
+						{t('settings.theme')}
 					</span>
 					<Dropdown
-						options={THEMES}
+						options={themeOptions}
 						value={settings.theme}
 						onChange={(theme) => onChange({ theme })}
 					/>
@@ -62,10 +88,10 @@ function SettingsDialog({ settings, onChange, onClose }) {
 				<div className="field">
 					<span className="field-label">
 						<LuPalette aria-hidden="true" />
-						Цвет акцента
+						{t('settings.accent')}
 					</span>
 					<Dropdown
-						options={ACCENT_OPTIONS}
+						options={accentOptions}
 						value={settings.accentColor}
 						onChange={(accentColor) => onChange({ accentColor })}
 					/>
@@ -74,7 +100,7 @@ function SettingsDialog({ settings, onChange, onClose }) {
 				<label className="field">
 					<span className="field-label">
 						<LuWrapText aria-hidden="true" />
-						Перенос длинных строк
+						{t('settings.wrap')}
 					</span>
 					<input
 						type="checkbox"
@@ -88,7 +114,7 @@ function SettingsDialog({ settings, onChange, onClose }) {
 				<div className="field">
 					<span className="field-label">
 						<LuType aria-hidden="true" />
-						Размер шрифта
+						{t('settings.fontSize')}
 					</span>
 					<Dropdown
 						options={FONT_SIZE_OPTIONS}
@@ -100,7 +126,7 @@ function SettingsDialog({ settings, onChange, onClose }) {
 				<div className="field">
 					<span className="field-label">
 						<LuIndentIncrease aria-hidden="true" />
-						Размер табуляции (в пробелах)
+						{t('settings.tabSize')}
 					</span>
 					<Dropdown
 						options={TAB_SIZE_OPTIONS}

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   saveFile: (payload) => ipcRenderer.invoke('file:save', payload),
   renameFile: (payload) => ipcRenderer.invoke('file:rename', payload),
   setDirty: (dirty) => ipcRenderer.send('doc:dirty', dirty),
+  setLanguage: (language) => ipcRenderer.send('app:set-language', language),
   onMenuCommand: (callback) => {
     const listener = (_event, command) => callback(command)
     ipcRenderer.on('menu:command', listener)

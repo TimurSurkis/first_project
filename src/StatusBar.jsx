@@ -1,4 +1,5 @@
 import { LuFileCode, LuTextCursorInput } from 'react-icons/lu'
+import { useTranslation } from './i18n/context.js'
 
 function countWords(text) {
   const trimmed = text.trim()
@@ -6,18 +7,20 @@ function countWords(text) {
 }
 
 function StatusBar({ text, cursor, format }) {
+  const { t } = useTranslation()
+
   return (
     <footer className="statusbar">
       <div className="statusbar-group">
         <span className="statusbar-item">
           <LuTextCursorInput aria-hidden="true" />
-          Ln {cursor.line}, Col {cursor.col}
+          {t('status.cursor', { line: cursor.line, col: cursor.col })}
         </span>
       </div>
       <div className="statusbar-group">
-        <span>Слов: {countWords(text)}</span>
-        <span>Символов: {text.length}</span>
-        <span>Строк: {text.split('\n').length}</span>
+        <span>{t('status.words', { count: countWords(text) })}</span>
+        <span>{t('status.chars', { count: text.length })}</span>
+        <span>{t('status.lines', { count: text.split('\n').length })}</span>
       </div>
       <div className="statusbar-group">
         <span className="statusbar-item">

@@ -18,21 +18,15 @@ import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
 import EditableTitle from './EditableTitle.jsx'
-import { markdownKeymap } from './markdownCommands.js'
+import I18nProvider from './i18n/I18nProvider.jsx'
+import { useTranslation } from './i18n/context.js'
+import { createMarkdownKeymap } from './markdownCommands.js'
 import { accentEditorTheme } from './editorTheme.js'
 import { findLanguage } from './languages.js'
 import { loadSettings, saveSettings } from './settings.js'
 import './App.css'
 
 const api = window.api
-
-const MODES = [
-  { id: 'edit', label: 'Редактор', icon: LuPenLine },
-  { id: 'split', label: 'Разделить', icon: LuColumns2 },
-  { id: 'preview', label: 'Предпросмотр', icon: LuEye },
-]
-
-const DEFAULT_NAME = 'Без названия.txt'
 
 function getBaseName(filePath) {
   return filePath.split(/[\\/]/).pop()
@@ -42,11 +36,11 @@ function isMarkdownFile(name) {
   return /\.md$/i.test(name)
 }
 
-function normalizeFileName(input) {
+function normalizeFileName(input, t) {
   const name = input.trim()
   if (!name) return null
   if (/[\\/:*?"<>|]/.test(name)) {
-    window.alert('Имя файла не может содержать символы \\ / : * ? " < > |')
+    window.alert(t('alert.invalidName'))
     return null
   }
   return /\.[^./\\]+$/.test(name) ? name : `${name}.txt`
@@ -61,28 +55,38 @@ function syncScroll(from, to) {
   if (Math.abs(to.scrollTop - target) > 1) to.scrollTop = target
 }
 
-function App() {
+function Editor({ settings, setSettings }) {
+  const { t } = useTranslation()
+  const untitledName = `${t('doc.untitled')}.txt`
+
   const [text, setText] = useState('')
   const [savedText, setSavedText] = useState('')
   const [filePath, setFilePath] = useState(null)
-  const [docName, setDocName] = useState(DEFAULT_NAME)
+  const [docName, setDocName] = useState(untitledName)
   const [mode, setMode] = useState('edit')
   const [cursor, setCursor] = useState({ line: 1, col: 1 })
-  const [settings, setSettings] = useState(loadSettings)
   const [showSettings, setShowSettings] = useState(false)
 
   const editorRef = useRef(null)
   const previewRef = useRef(null)
 
+  const modes = [
+    { id: 'edit', label: t('mode.edit'), icon: LuPenLine },
+    { id: 'split', label: t('mode.split'), icon: LuColumns2 },
+    { id: 'preview', label: t('mode.preview'), icon: LuEye },
+  ]
+
   const language = findLanguage(docName)
+  const formatLabel = language.name === 'plain-text' ? t('status.plainText') : language.name
+  const formatKeymap = useMemo(() => createMarkdownKeymap(t), [t])
   const extensions = useMemo(
     () => [
       language.support(),
-      language.name === 'Markdown' ? markdownKeymap : [],
+      language.name === 'Markdown' ? formatKeymap : [],
       accentEditorTheme(settings.accentColor),
       settings.lineWrapping ? EditorView.lineWrapping : [],
     ],
-    [language, settings.lineWrapping, settings.accentColor],
+    [language, formatKeymap, settings.lineWrapping, settings.accentColor],
   )
   const basicSetup = useMemo(() => ({ tabSize: settings.tabSize }), [settings.tabSize])
   const handleCursorUpdate = useCallback((update) => {
@@ -106,7 +110,7 @@ function App() {
   }
 
   function confirmDiscard() {
-    return !isDirty || window.confirm('Есть несохранённые изменения. Продолжить без сохранения?')
+    return !isDirty || window.confirm(t('confirm.unsaved'))
   }
 
   function newFile() {
@@ -114,7 +118,7 @@ function App() {
     setText('')
     setSavedText('')
     setFilePath(null)
-    setDocName(DEFAULT_NAME)
+    setDocName(untitledName)
   }
 
   async function openFile() {
@@ -141,7 +145,7 @@ function App() {
   }
 
   async function renameDocument(input) {
-    const name = normalizeFileName(input)
+    const name = normalizeFileName(input, t)
     if (!name || name === docName) return
 
     if (!filePath) {
@@ -151,7 +155,7 @@ function App() {
 
     const result = await api.renameFile({ filePath, newName: name })
     if (result.error) {
-      window.alert(result.error)
+      window.alert(result.error === 'exists' ? t('error.fileExists', { name }) : result.error)
       return
     }
     setFilePath(result.filePath)
@@ -165,7 +169,9 @@ function App() {
   useEffect(() => {
     saveSettings(settings)
     document.documentElement.dataset.theme = settings.theme
+    document.documentElement.lang = settings.language
     document.documentElement.style.setProperty('--accent', settings.accentColor)
+    api.setLanguage(settings.language)
   }, [settings])
 
   function updateSettings(patch) {
@@ -201,14 +207,18 @@ function App() {
     <div className="app">
       <header className="toolbar">
         <div className="toolbar-group">
-          <IconButton icon={LuFilePlus} label="Новый" onClick={newFile} />
-          <IconButton icon={LuFolderOpen} label="Открыть" onClick={openFile} />
-          <IconButton icon={LuSave} label="Сохранить" onClick={() => saveFile(false)} />
-          <IconButton icon={LuSaveAll} label="Сохранить как" onClick={() => saveFile(true)} />
+          <IconButton icon={LuFilePlus} label={t('toolbar.new')} onClick={newFile} />
+          <IconButton icon={LuFolderOpen} label={t('toolbar.open')} onClick={openFile} />
+          <IconButton icon={LuSave} label={t('toolbar.save')} onClick={() => saveFile(false)} />
+          <IconButton
+            icon={LuSaveAll}
+            label={t('toolbar.saveAs')}
+            onClick={() => saveFile(true)}
+          />
         </div>
         {isMarkdown && (
           <div className="toolbar-group">
-            {MODES.map(({ id, label, icon }) => (
+            {modes.map(({ id, label, icon }) => (
               <IconButton
                 key={id}
                 icon={icon}
@@ -221,7 +231,11 @@ function App() {
         )}
         <div className="toolbar-end">
           <EditableTitle name={docName} isDirty={isDirty} onRename={renameDocument} />
-          <IconButton icon={LuSettings} label="Настройки" onClick={() => setShowSettings(true)} />
+          <IconButton
+            icon={LuSettings}
+            label={t('toolbar.settings')}
+            onClick={() => setShowSettings(true)}
+          />
         </div>
       </header>
       {isMarkdown && showEditor && <FormatToolbar onRun={runFormat} />}
@@ -246,7 +260,7 @@ function App() {
           </div>
         )}
       </div>
-      <StatusBar text={text} cursor={cursor} format={language.name} />
+      <StatusBar text={text} cursor={cursor} format={formatLabel} />
       {showSettings && (
         <SettingsDialog
           settings={settings}
@@ -255,6 +269,16 @@ function App() {
         />
       )}
     </div>
+  )
+}
+
+function App() {
+  const [settings, setSettings] = useState(loadSettings)
+
+  return (
+    <I18nProvider language={settings.language}>
+      <Editor settings={settings} setSettings={setSettings} />
+    </I18nProvider>
   )
 }
 

@@ -39,7 +39,7 @@ const MARKDOWN = {
 }
 
 const PLAIN_TEXT = {
-  name: 'Обычный текст',
+  name: 'plain-text',
   extensions: [],
   support: () => [],
 }
