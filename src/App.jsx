@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import {
-	LuColumns2,
-	LuEye,
-	LuPanelLeft,
-	LuPanelLeftClose,
-	LuPenLine,
-} from 'react-icons/lu'
+import { LuColumns2, LuEye, LuPenLine } from 'react-icons/lu'
 import IconButton from './IconButton.jsx'
 import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
-import EditableTitle from './EditableTitle.jsx'
-import Sidebar from './Sidebar.jsx'
+import TabBar from './TabBar.jsx'
 import DocumentEditor from './DocumentEditor.jsx'
 import I18nProvider from './i18n/I18nProvider.jsx'
 import { useTranslation } from './i18n/context.js'
@@ -82,6 +75,7 @@ function Editor({ settings, setSettings }) {
 		return { docs: [first], activeId: first.id }
 	})
 	const [showSettings, setShowSettings] = useState(false)
+	const [bubble, setBubble] = useState(null)
 
 	const editorRefs = useRef({})
 	const previewRef = useRef(null)
@@ -89,12 +83,13 @@ function Editor({ settings, setSettings }) {
 	const { docs, activeId } = tabs
 	const doc = docs.find((item) => item.id === activeId)
 
-	const isDirty = doc.text !== doc.savedText
 	const isMarkdown = isMarkdownFile(doc.docName)
 	const currentMode = isMarkdown ? doc.mode : 'edit'
 	const showEditor = currentMode !== 'preview'
 	const showPreview = currentMode !== 'edit'
 	const isSplit = currentMode === 'split'
+	const bubbleVisible =
+		Boolean(bubble) && bubble.id === activeId && isMarkdown && showEditor
 
 	const modes = [
 		{ id: 'edit', label: t('mode.edit'), icon: LuPenLine },
@@ -126,6 +121,9 @@ function Editor({ settings, setSettings }) {
 		(id, cursor) => updateDocument(id, { cursor }),
 		[updateDocument],
 	)
+	const handleSelectionChange = useCallback((id, rect) => {
+		setBubble(rect ? { id, ...rect } : null)
+	}, [])
 	const registerEditor = useCallback((id, node) => {
 		editorRefs.current[id] = node
 	}, [])
@@ -198,7 +196,11 @@ function Editor({ settings, setSettings }) {
 
 		if (file.imported) {
 			setTabs((current) => {
-				const next = createDocument({ docName: file.name, text: file.content, savedText: '' })
+				const next = createDocument({
+					docName: file.name,
+					text: file.content,
+					savedText: '',
+				})
 				return { docs: [...current.docs, next], activeId: next.id }
 			})
 			return
@@ -235,8 +237,10 @@ function Editor({ settings, setSettings }) {
 		})
 	}
 
-	async function renameDocument(input) {
-		const { id, filePath, docName } = doc
+	async function renameDocument(id, input) {
+		const target = docs.find((item) => item.id === id)
+		if (!target) return
+		const { filePath, docName } = target
 		const name = normalizeFileName(input, t)
 		if (!name || name === docName) return
 
@@ -279,28 +283,6 @@ function Editor({ settings, setSettings }) {
 		setSettings((current) => ({ ...current, ...patch }))
 	}
 
-	function toggleSidebar() {
-		setSettings((current) => ({
-			...current,
-			sidebarOpen: !current.sidebarOpen,
-		}))
-	}
-
-	useEffect(() => {
-		const handleKeydown = (event) => {
-			if ((event.ctrlKey || event.metaKey) && event.key === '\\') {
-				event.preventDefault()
-				setSettings((current) => ({
-					...current,
-					sidebarOpen: !current.sidebarOpen,
-				}))
-			}
-		}
-
-		window.addEventListener('keydown', handleKeydown)
-		return () => window.removeEventListener('keydown', handleKeydown)
-	}, [setSettings])
-
 	useEffect(() => {
 		return api.onMenuCommand((command) => {
 			if (command === 'new') newFile()
@@ -310,6 +292,7 @@ function Editor({ settings, setSettings }) {
 			if (command === 'close-tab') closeDocument(doc.id)
 			if (command === 'next-tab') cycleDocument(1)
 			if (command === 'prev-tab') cycleDocument(-1)
+			if (command === 'settings') setShowSettings(true)
 		})
 	})
 
@@ -331,94 +314,66 @@ function Editor({ settings, setSettings }) {
 
 	return (
 		<div className="app">
-			<div className="app-body">
-				{settings.sidebarOpen && (
-					<Sidebar
-						width={settings.sidebarWidth}
-						docs={docs}
-						activeId={activeId}
-						onNew={newFile}
-						onOpen={openFile}
-						onSave={() => saveFile(false)}
-						onSaveAs={() => saveFile(true)}
-						onActivate={activateDocument}
-						onCloseDocument={closeDocument}
-						onOpenSettings={() => setShowSettings(true)}
-						onResize={(sidebarWidth) =>
-							updateSettings({ sidebarWidth })
-						}
-					/>
-				)}
-				<div className="app-main">
-					<header className="toolbar">
-						<IconButton
-							icon={
-								settings.sidebarOpen
-									? LuPanelLeftClose
-									: LuPanelLeft
-							}
-							title={t('sidebar.toggle')}
-							pressed={settings.sidebarOpen}
-							onClick={toggleSidebar}
-						/>
-						{isMarkdown && (
-							<div className="toolbar-group">
-								{modes.map(({ id, label, icon }) => (
-									<IconButton
-										key={id}
-										icon={icon}
-										label={label}
-										pressed={currentMode === id}
-										onClick={() => setMode(id)}
-									/>
-								))}
-							</div>
-						)}
-						<div className="toolbar-end">
-							<EditableTitle
-								key={doc.id}
-								name={doc.docName}
-								isDirty={isDirty}
-								onRename={renameDocument}
-							/>
-						</div>
-					</header>
-					{isMarkdown && showEditor && (
-						<FormatToolbar onRun={runFormat} />
-					)}
-					<div
-						className={`workspace${isSplit ? ' split' : ''}`}
-						style={{
-							'--editor-font-size': `${settings.fontSize}px`,
-						}}
-					>
-						{docs.map((item) => (
-							<DocumentEditor
-								key={item.id}
-								doc={item}
-								visible={item.id === activeId && showEditor}
-								settings={settings}
-								formatKeymap={formatKeymap}
-								registerEditor={registerEditor}
-								onTextChange={handleTextChange}
-								onCursorChange={handleCursorChange}
+			<div className="tabrow">
+				<TabBar
+					docs={docs}
+					activeId={activeId}
+					onActivate={activateDocument}
+					onClose={closeDocument}
+					onNew={newFile}
+					onRename={renameDocument}
+				/>
+				{isMarkdown && (
+					<div className="tabrow-modes">
+						{modes.map(({ id, label, icon }) => (
+							<IconButton
+								key={id}
+								icon={icon}
+								title={label}
+								pressed={currentMode === id}
+								onClick={() => setMode(id)}
 							/>
 						))}
-						{showPreview && (
-							<div className="preview" ref={previewRef}>
-								<ReactMarkdown remarkPlugins={[remarkGfm]}>
-									{doc.text}
-								</ReactMarkdown>
-							</div>
-						)}
 					</div>
-					<StatusBar
-						text={doc.text}
-						cursor={doc.cursor}
-						format={formatLabel}
-					/>
-				</div>
+				)}
 			</div>
+			<div
+				className={`workspace${isSplit ? ' split' : ''}`}
+				style={{ '--editor-font-size': `${settings.fontSize}px` }}
+			>
+				{docs.map((item) => (
+					<DocumentEditor
+						key={item.id}
+						doc={item}
+						visible={item.id === activeId && showEditor}
+						settings={settings}
+						formatKeymap={formatKeymap}
+						registerEditor={registerEditor}
+						onTextChange={handleTextChange}
+						onCursorChange={handleCursorChange}
+						onSelectionChange={handleSelectionChange}
+					/>
+				))}
+				{showPreview && (
+					<div className="preview" ref={previewRef}>
+						<ReactMarkdown remarkPlugins={[remarkGfm]}>
+							{doc.text}
+						</ReactMarkdown>
+					</div>
+				)}
+				{bubbleVisible && (
+					<FormatToolbar
+						onRun={runFormat}
+						left={bubble.left}
+						top={bubble.top}
+					/>
+				)}
+			</div>
+			<StatusBar
+				text={doc.text}
+				cursor={doc.cursor}
+				format={formatLabel}
+			/>
 			{showSettings && (
 				<SettingsDialog
 					settings={settings}

@@ -4,6 +4,21 @@ import { EditorView } from '@codemirror/view'
 import { accentEditorTheme } from './editorTheme.js'
 import { findLanguage } from './languages.js'
 
+function getSelectionRect(view, from, to) {
+  if (from === to) return null
+
+  const start = view.coordsAtPos(from)
+  const end = view.coordsAtPos(to)
+  const workspace = view.dom.closest('.workspace')
+  if (!start || !end || !workspace) return null
+
+  const box = workspace.getBoundingClientRect()
+  return {
+    left: (start.left + end.right) / 2 - box.left,
+    top: Math.min(start.top, end.top) - box.top,
+  }
+}
+
 function DocumentEditor({
   doc,
   visible,
@@ -12,6 +27,7 @@ function DocumentEditor({
   registerEditor,
   onTextChange,
   onCursorChange,
+  onSelectionChange,
 }) {
   const language = findLanguage(doc.docName)
   const extensions = useMemo(
@@ -31,11 +47,12 @@ function DocumentEditor({
   )
   const handleUpdate = useCallback(
     (update) => {
-      const head = update.state.selection.main.head
+      const { from, to, head } = update.state.selection.main
       const line = update.state.doc.lineAt(head)
       onCursorChange(doc.id, { line: line.number, col: head - line.from + 1 })
+      onSelectionChange(doc.id, getSelectionRect(update.view, from, to))
     },
-    [doc.id, onCursorChange],
+    [doc.id, onCursorChange, onSelectionChange],
   )
 
   return (

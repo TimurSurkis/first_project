@@ -180,6 +180,12 @@ function buildMenu() {
 					click: sendCommand('prev-tab'),
 				},
 				{ type: 'separator' },
+				{
+					label: t('menu.settings'),
+					accelerator: 'CmdOrCtrl+,',
+					click: sendCommand('settings'),
+				},
+				{ type: 'separator' },
 				{ role: 'quit', label: t('menu.quit') },
 			],
 		},

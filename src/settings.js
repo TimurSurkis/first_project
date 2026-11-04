@@ -7,11 +7,7 @@ export const DEFAULT_SETTINGS = {
   tabSize: 4,
   theme: 'light',
   accentColor: '#2580FF',
-  sidebarOpen: true,
-  sidebarWidth: 220,
 }
-
-export const SIDEBAR_WIDTH = { default: 220, min: 160, max: 480 }
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 22, 24, 28, 32]
 export const TAB_SIZES = [2, 4, 8]
