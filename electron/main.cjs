@@ -1,6 +1,15 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron')
 const fs = require('fs/promises')
 const path = require('path')
+const mammoth = require('mammoth')
+const TurndownService = require('turndown')
+
+const turndown = new TurndownService({
+	headingStyle: 'atx',
+	bulletListMarker: '-',
+	codeBlockStyle: 'fenced',
+})
+turndown.addRule('dropImages', { filter: 'img', replacement: () => '' })
 
 const MESSAGES = {
 	ru: require('../locales/ru.json'),
@@ -16,10 +25,23 @@ function t(key) {
 }
 
 function textFilters() {
+	return [{ name: t('dialog.textFiles'), extensions: ['txt', 'md'] }]
+}
+
+function openFilters() {
 	return [
 		{ name: t('dialog.textFiles'), extensions: ['txt', 'md'] },
+		{ name: t('dialog.wordFiles'), extensions: ['docx'] },
 		{ name: t('dialog.allFiles'), extensions: ['*'] },
 	]
+}
+
+async function importDocx(filePath) {
+	const { value: html } = await mammoth.convertToHtml(
+		{ path: filePath },
+		{ convertImage: mammoth.images.imgElement(() => Promise.resolve({ src: '' })) },
+	)
+	return turndown.turndown(html)
 }
 
 function registerIpcHandlers() {
@@ -28,12 +50,37 @@ function registerIpcHandlers() {
 			mainWindow,
 			{
 				properties: ['openFile'],
-				filters: textFilters(),
+				filters: openFilters(),
 			},
 		)
 		if (canceled) return null
 
 		const filePath = filePaths[0]
+		const extension = path.extname(filePath).toLowerCase()
+
+		if (extension === '.doc') {
+			await dialog.showMessageBox(mainWindow, {
+				type: 'info',
+				message: t('error.docNotSupported'),
+			})
+			return null
+		}
+
+		if (extension === '.docx') {
+			try {
+				const content = await importDocx(filePath)
+				const name = path.basename(filePath, extension) + '.md'
+				return { filePath: null, name, content, imported: true }
+			} catch (error) {
+				await dialog.showMessageBox(mainWindow, {
+					type: 'error',
+					message: t('error.importFailed'),
+					detail: error.message,
+				})
+				return null
+			}
+		}
+
 		const content = await fs.readFile(filePath, 'utf8')
 		return { filePath, content }
 	})

@@ -196,6 +196,14 @@ function Editor({ settings, setSettings }) {
 		const file = await api.openFile()
 		if (!file) return
 
+		if (file.imported) {
+			setTabs((current) => {
+				const next = createDocument({ docName: file.name, text: file.content, savedText: '' })
+				return { docs: [...current.docs, next], activeId: next.id }
+			})
+			return
+		}
+
 		setTabs((current) => {
 			const existing = current.docs.find(
 				(item) => item.filePath === file.filePath,
