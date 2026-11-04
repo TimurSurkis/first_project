@@ -5,14 +5,12 @@ import {
 	LuColumns2,
 	LuEye,
 	LuPanelLeft,
-	LuPanelLeftClose,
 	LuPenLine,
 } from 'react-icons/lu'
 import IconButton from './IconButton.jsx'
 import StatusBar from './StatusBar.jsx'
 import FormatToolbar from './FormatToolbar.jsx'
 import SettingsDialog from './SettingsDialog.jsx'
-import EditableTitle from './EditableTitle.jsx'
 import Sidebar from './Sidebar.jsx'
 import DocumentEditor from './DocumentEditor.jsx'
 import I18nProvider from './i18n/I18nProvider.jsx'
@@ -89,7 +87,6 @@ function Editor({ settings, setSettings }) {
 	const { docs, activeId } = tabs
 	const doc = docs.find((item) => item.id === activeId)
 
-	const isDirty = doc.text !== doc.savedText
 	const isMarkdown = isMarkdownFile(doc.docName)
 	const currentMode = isMarkdown ? doc.mode : 'edit'
 	const showEditor = currentMode !== 'preview'
@@ -235,8 +232,10 @@ function Editor({ settings, setSettings }) {
 		})
 	}
 
-	async function renameDocument(input) {
-		const { id, filePath, docName } = doc
+	async function renameDocument(id, input) {
+		const target = docs.find((item) => item.id === id)
+		if (!target) return
+		const { filePath, docName } = target
 		const name = normalizeFileName(input, t)
 		if (!name || name === docName) return
 
@@ -332,7 +331,7 @@ function Editor({ settings, setSettings }) {
 	return (
 		<div className="app">
 			<div className="app-body">
-				{settings.sidebarOpen && (
+				{settings.sidebarOpen ? (
 					<Sidebar
 						width={settings.sidebarWidth}
 						docs={docs}
@@ -343,48 +342,38 @@ function Editor({ settings, setSettings }) {
 						onSaveAs={() => saveFile(true)}
 						onActivate={activateDocument}
 						onCloseDocument={closeDocument}
+						onRename={renameDocument}
 						onOpenSettings={() => setShowSettings(true)}
+						onToggle={toggleSidebar}
 						onResize={(sidebarWidth) =>
 							updateSettings({ sidebarWidth })
 						}
 					/>
-				)}
-				<div className="app-main">
-					<header className="toolbar">
+				) : (
+					<div className="sidebar-rail">
 						<IconButton
-							icon={
-								settings.sidebarOpen
-									? LuPanelLeftClose
-									: LuPanelLeft
-							}
+							icon={LuPanelLeft}
 							title={t('sidebar.toggle')}
-							pressed={settings.sidebarOpen}
 							onClick={toggleSidebar}
 						/>
-						{isMarkdown && (
-							<div className="toolbar-group">
+					</div>
+				)}
+				<div className="app-main">
+					{isMarkdown && (
+						<div className="formatrow">
+							{showEditor && <FormatToolbar onRun={runFormat} />}
+							<div className="formatrow-modes">
 								{modes.map(({ id, label, icon }) => (
 									<IconButton
 										key={id}
 										icon={icon}
-										label={label}
+										title={label}
 										pressed={currentMode === id}
 										onClick={() => setMode(id)}
 									/>
 								))}
 							</div>
-						)}
-						<div className="toolbar-end">
-							<EditableTitle
-								key={doc.id}
-								name={doc.docName}
-								isDirty={isDirty}
-								onRename={renameDocument}
-							/>
 						</div>
-					</header>
-					{isMarkdown && showEditor && (
-						<FormatToolbar onRun={runFormat} />
 					)}
 					<div
 						className={`workspace${isSplit ? ' split' : ''}`}

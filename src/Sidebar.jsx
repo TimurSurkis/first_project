@@ -1,5 +1,12 @@
 import { useRef } from 'react'
-import { LuFilePlus, LuFolderOpen, LuSave, LuSaveAll, LuSettings } from 'react-icons/lu'
+import {
+  LuFilePlus,
+  LuFolderOpen,
+  LuPanelLeftClose,
+  LuSave,
+  LuSaveAll,
+  LuSettings,
+} from 'react-icons/lu'
 import IconButton from './IconButton.jsx'
 import TabBar from './TabBar.jsx'
 import { useTranslation } from './i18n/context.js'
@@ -19,7 +26,9 @@ function Sidebar({
   onSaveAs,
   onActivate,
   onCloseDocument,
+  onRename,
   onOpenSettings,
+  onToggle,
   onResize,
 }) {
   const { t } = useTranslation()
@@ -51,6 +60,10 @@ function Sidebar({
 
   return (
     <aside ref={panelRef} className="sidebar" style={{ width }}>
+      <div className="sidebar-header">
+        <IconButton icon={LuPanelLeftClose} title={t('sidebar.toggle')} onClick={onToggle} />
+      </div>
+
       <div className="sidebar-section sidebar-actions">
         <IconButton icon={LuFilePlus} label={t('toolbar.new')} onClick={onNew} />
         <IconButton icon={LuFolderOpen} label={t('toolbar.open')} onClick={onOpen} />
@@ -65,6 +78,7 @@ function Sidebar({
           activeId={activeId}
           onActivate={onActivate}
           onClose={onCloseDocument}
+          onRename={onRename}
         />
       </div>
 
