@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram id="Gu1-Y5k4tfoHUqE0Nlw0" name="Сторінка-2">
-    <mxGraphModel dx="2359" dy="2071" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="2533" dy="2174" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -12,6 +12,9 @@
         </mxCell>
         <mxCell id="8O32BjcMLNLTsZXsheM1-25" parent="8O32BjcMLNLTsZXsheM1-24" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=bottom;" value="md format toolbar" vertex="1">
           <mxGeometry height="240" width="190" as="geometry" />
+        </mxCell>
+        <mxCell id="qQlSzVWk2USAhxHvvWmS-75" parent="8O32BjcMLNLTsZXsheM1-24" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;" value="&lt;div&gt;src/&lt;/div&gt;&lt;div&gt;markdownCommands.ts&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;используется Prec.high, чтобы кастомные shortcuts не конфликтовали со встроенными в CodeMirror&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="171" x="9.5" y="120" as="geometry" />
         </mxCell>
         <mxCell id="qQlSzVWk2USAhxHvvWmS-23" connectable="0" parent="1" style="group;verticalAlign=bottom;" value="" vertex="1">
           <mxGeometry height="260" width="280" x="-133" y="100" as="geometry" />
@@ -124,6 +127,20 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
+        <mxCell id="VVK3oQe5eXzH56roHHwT-2" edge="1" parent="1" source="qQlSzVWk2USAhxHvvWmS-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;labelPadding=0 4;" target="VVK3oQe5eXzH56roHHwT-1">
+          <mxGeometry relative="1" x="-0.0007" as="geometry">
+            <Array as="points">
+              <mxPoint x="510" y="435" />
+              <mxPoint x="510" y="600" />
+              <mxPoint x="450" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VVK3oQe5eXzH56roHHwT-3" connectable="0" parent="VVK3oQe5eXzH56roHHwT-2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;labelPadding=0 4;" value="&lt;div&gt;импорт функции&lt;/div&gt;&lt;div&gt;createHtmlExport()&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.3355" y="1" as="geometry">
+            <mxPoint x="33" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="qQlSzVWk2USAhxHvvWmS-41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;" value="&lt;div&gt;src/&lt;/div&gt;&lt;div&gt;App.tsx&lt;/div&gt;" vertex="1">
           <mxGeometry height="110" width="220" x="660.29" y="380" as="geometry" />
         </mxCell>
@@ -141,9 +158,6 @@
         </mxCell>
         <mxCell id="qQlSzVWk2USAhxHvvWmS-57" parent="qQlSzVWk2USAhxHvvWmS-64" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=middle;fontSize=8;" value="CodeMirror 6" vertex="1">
           <mxGeometry height="40" width="80" x="19.70999999999998" y="49" as="geometry" />
-        </mxCell>
-        <mxCell id="qQlSzVWk2USAhxHvvWmS-75" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;" value="&lt;div&gt;src/&lt;/div&gt;&lt;div&gt;markdownCommands.ts&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="140" x="852" y="750" as="geometry" />
         </mxCell>
         <mxCell id="qQlSzVWk2USAhxHvvWmS-82" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;" value="&lt;div&gt;src/&lt;/div&gt;&lt;div&gt;StatusBar.tsx&lt;/div&gt;" vertex="1">
           <mxGeometry height="60" width="120" x="510" y="610" as="geometry" />
@@ -480,6 +494,9 @@
           <mxGeometry relative="1" x="-0.0773" as="geometry">
             <mxPoint y="21" as="offset" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="VVK3oQe5eXzH56roHHwT-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;" value="&lt;div&gt;src/&lt;/div&gt;&lt;div&gt;exportHtml.tsx&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="330" y="586" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
