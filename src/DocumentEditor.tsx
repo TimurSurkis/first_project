@@ -1,8 +1,21 @@
 import { useCallback, useMemo } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
+import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import type { Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { accentEditorTheme } from './editorTheme.js'
-import { findLanguage } from './languages.js'
+import type { ViewUpdate } from '@codemirror/view'
+import { accentEditorTheme } from './editorTheme.ts'
+import { findLanguage } from './languages.ts'
+import type { CursorPosition, DocumentId, EditorDocument, EditorSettings } from './types'
+
+interface DocumentEditorProps {
+	doc: EditorDocument
+	visible: boolean
+	settings: EditorSettings
+	formatKeymap: Extension
+	registerEditor: (id: DocumentId, node: ReactCodeMirrorRef | null) => void
+	onTextChange: (id: DocumentId, text: string) => void
+	onCursorChange: (id: DocumentId, cursor: CursorPosition) => void
+}
 
 function DocumentEditor({
   doc,
@@ -11,8 +24,8 @@ function DocumentEditor({
   formatKeymap,
   registerEditor,
   onTextChange,
-  onCursorChange,
-}) {
+	onCursorChange,
+}: DocumentEditorProps) {
   const language = findLanguage(doc.docName)
   const extensions = useMemo(
     () => [
@@ -26,11 +39,11 @@ function DocumentEditor({
   const basicSetup = useMemo(() => ({ tabSize: settings.tabSize }), [settings.tabSize])
 
   const handleChange = useCallback(
-    (value) => onTextChange(doc.id, value),
+    (value: string) => onTextChange(doc.id, value),
     [doc.id, onTextChange],
   )
-  const handleUpdate = useCallback(
-    (update) => {
+	const handleUpdate = useCallback(
+    (update: ViewUpdate) => {
       const head = update.state.selection.main.head
       const line = update.state.doc.lineAt(head)
       onCursorChange(doc.id, { line: line.number, col: head - line.from + 1 })

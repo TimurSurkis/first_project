@@ -1,12 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuCheck, LuChevronDown } from 'react-icons/lu'
+import type { CSSProperties, KeyboardEvent } from 'react'
+import type { DropdownOption } from './types'
 
-function Dropdown({ options, value, onChange, placeholder = '', width }) {
+interface DropdownProps<T extends string | number> {
+	options: readonly DropdownOption<T>[]
+	value: T | null
+	onChange: (value: T) => void
+	placeholder?: string
+	width?: CSSProperties['width']
+}
+
+function Dropdown<T extends string | number>({
+	options,
+	value,
+	onChange,
+	placeholder = '',
+	width,
+}: DropdownProps<T>) {
 	const [open, setOpen] = useState(false)
 	const [activeIndex, setActiveIndex] = useState(0)
-	const rootRef = useRef(null)
-	const triggerRef = useRef(null)
-	const optionRefs = useRef([])
+	const rootRef = useRef<HTMLDivElement>(null)
+	const triggerRef = useRef<HTMLButtonElement>(null)
+	const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
 
 	const selectedIndex = options.findIndex((option) => option.value === value)
 	const selected = selectedIndex >= 0 ? options[selectedIndex] : null
@@ -15,8 +31,10 @@ function Dropdown({ options, value, onChange, placeholder = '', width }) {
 	useEffect(() => {
 		if (!open) return
 
-		const handlePointerDown = (event) => {
-			if (!rootRef.current?.contains(event.target)) setOpen(false)
+		const handlePointerDown = (event: PointerEvent) => {
+			if (!(event.target instanceof Node) || !rootRef.current?.contains(event.target)) {
+				setOpen(false)
+			}
 		}
 
 		document.addEventListener('pointerdown', handlePointerDown)
@@ -36,20 +54,20 @@ function Dropdown({ options, value, onChange, placeholder = '', width }) {
 		setOpen(false)
 	}
 
-	function handleSelect(option) {
+	function handleSelect(option: DropdownOption<T>): void {
 		onChange(option.value)
 		closeMenu()
 		triggerRef.current?.focus()
 	}
 
-	function handleTriggerKeydown(event) {
+	function handleTriggerKeydown(event: KeyboardEvent<HTMLButtonElement>): void {
 		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault()
 			openMenu()
 		}
 	}
 
-	function handleMenuKeydown(event) {
+	function handleMenuKeydown(event: KeyboardEvent<HTMLDivElement>): void {
 		switch (event.key) {
 			case 'ArrowDown':
 				event.preventDefault()

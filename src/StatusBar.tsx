@@ -1,12 +1,19 @@
 import { LuFileCode, LuTextCursorInput } from 'react-icons/lu'
-import { useTranslation } from './i18n/context.js'
+import { useTranslation } from './i18n/context.ts'
+import type { CursorPosition } from './types'
 
-function countWords(text) {
+interface StatusBarProps {
+	text: string
+	cursor: CursorPosition
+	format: string
+}
+
+function countWords(text: string): number {
   const trimmed = text.trim()
   return trimmed ? trimmed.split(/\s+/).length : 0
 }
 
-function StatusBar({ text, cursor, format }) {
+function StatusBar({ text, cursor, format }: StatusBarProps) {
   const { t } = useTranslation()
 
   return (

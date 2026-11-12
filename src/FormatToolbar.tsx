@@ -1,14 +1,19 @@
 import { useMemo } from 'react'
+import type { Command } from '@codemirror/view'
 import { LuHeading } from 'react-icons/lu'
-import Dropdown from './Dropdown.jsx'
-import IconButton from './IconButton.jsx'
-import { useTranslation } from './i18n/context.js'
-import { createFormatCommands, headingLevels, setHeading } from './markdownCommands.js'
+import Dropdown from './Dropdown.tsx'
+import IconButton from './IconButton.tsx'
+import { useTranslation } from './i18n/context.ts'
+import { createFormatCommands, headingLevels, setHeading } from './markdownCommands.ts'
 
 const GROUPS = ['inline', 'block', 'insert']
 const HEADING_OPTIONS = headingLevels.map((level) => ({ value: level, label: `H${level}` }))
 
-function FormatToolbar({ onRun }) {
+interface FormatToolbarProps {
+	onRun: (command: Command) => void
+}
+
+function FormatToolbar({ onRun }: FormatToolbarProps) {
   const { t } = useTranslation()
   const commands = useMemo(() => createFormatCommands(t), [t])
 

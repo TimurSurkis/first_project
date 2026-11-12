@@ -1,4 +1,14 @@
-function IconButton({ icon: Icon, label, title, pressed, onClick }) {
+import type { IconType } from 'react-icons'
+
+interface IconButtonProps {
+	icon: IconType
+	label?: string
+	title?: string
+	pressed?: boolean
+	onClick?: () => void
+}
+
+function IconButton({ icon: Icon, label, title, pressed, onClick }: IconButtonProps) {
   return (
     <button
       type="button"

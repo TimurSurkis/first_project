@@ -1,5 +1,7 @@
 import { EditorSelection } from '@codemirror/state'
-import { keymap } from '@codemirror/view'
+import type { Extension } from '@codemirror/state'
+import { EditorView, keymap } from '@codemirror/view'
+import type { Command } from '@codemirror/view'
 import {
   LuBold,
   LuCode,
@@ -13,8 +15,12 @@ import {
   LuStrikethrough,
   LuTable,
 } from 'react-icons/lu'
+import type { FormatCommand, HeadingLevel, Translate } from './types'
 
-function changeLines(view, transform) {
+function changeLines(
+	view: EditorView,
+	transform: (text: string, index: number) => string,
+): boolean {
   const { state } = view
   const { from, to } = state.selection.main
   const first = state.doc.lineAt(from).number
@@ -31,7 +37,12 @@ function changeLines(view, transform) {
   return true
 }
 
-function toggleWrap(view, before, after, placeholder) {
+function toggleWrap(
+	view: EditorView,
+	before: string,
+	after: string,
+	placeholder: string,
+): boolean {
   const { state } = view
   const { from, to } = state.selection.main
   const selected = state.sliceDoc(from, to)
@@ -57,27 +68,27 @@ function toggleWrap(view, before, after, placeholder) {
   return true
 }
 
-function togglePrefix(pattern, prefix) {
+function togglePrefix(pattern: RegExp, prefix: string): Command {
   return (view) =>
     changeLines(view, (text) => (pattern.test(text) ? text.replace(pattern, '') : prefix + text))
 }
 
-function toggleOrderedList(view) {
+function toggleOrderedList(view: EditorView): boolean {
   return changeLines(view, (text, index) =>
     /^\d+\. /.test(text) ? text.replace(/^\d+\. /, '') : `${index + 1}. ${text}`,
   )
 }
 
-export function setHeading(view, level) {
+export function setHeading(view: EditorView, level: HeadingLevel): boolean {
   return changeLines(view, (text) => {
     const match = text.match(/^(#{1,6}) /)
     const clean = text.replace(/^#{1,6} /, '')
-    if (match && match[1].length === level) return clean
+		if (match?.[1]?.length === level) return clean
     return '#'.repeat(level) + ' ' + clean
   })
 }
 
-function insertLink(view, placeholder) {
+function insertLink(view: EditorView, placeholder: string): boolean {
   const { state } = view
   const { from, to } = state.selection.main
   const label = state.sliceDoc(from, to) || placeholder
@@ -91,7 +102,7 @@ function insertLink(view, placeholder) {
   return true
 }
 
-function insertCodeBlock(view) {
+function insertCodeBlock(view: EditorView): boolean {
   const { state } = view
   const { from, to } = state.selection.main
   const body = state.sliceDoc(from, to)
@@ -103,7 +114,11 @@ function insertCodeBlock(view) {
   return true
 }
 
-function insertTable(view, firstColumn, secondColumn) {
+function insertTable(
+	view: EditorView,
+	firstColumn: string,
+	secondColumn: string,
+): boolean {
   const { state } = view
   const line = state.doc.lineAt(state.selection.main.from)
   const lead = line.text ? '\n\n' : ''
@@ -117,9 +132,9 @@ function insertTable(view, firstColumn, secondColumn) {
   return true
 }
 
-export const headingLevels = [1, 2, 3, 4, 5, 6]
+export const headingLevels = [1, 2, 3, 4, 5, 6] as const satisfies readonly HeadingLevel[]
 
-export function createFormatCommands(t) {
+export function createFormatCommands(t: Translate): FormatCommand[] {
   const text = t('format.textPlaceholder')
 
   return [
@@ -211,14 +226,19 @@ export function createFormatCommands(t) {
   ]
 }
 
-export function createMarkdownKeymap(t) {
+export function createMarkdownKeymap(t: Translate): Extension {
   const commands = createFormatCommands(t)
 
   return keymap.of([
-    ...commands.filter((command) => command.key).map(({ key, run }) => ({ key, run })),
+		...commands
+			.filter(
+				(command): command is FormatCommand & { key: string } =>
+					command.key !== undefined,
+			)
+			.map(({ key, run }) => ({ key, run })),
     ...headingLevels.map((level) => ({
       key: `Mod-Alt-${level}`,
-      run: (view) => setHeading(view, level),
+	      run: (view: EditorView) => setHeading(view, level),
     })),
   ])
 }

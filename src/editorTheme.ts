@@ -1,6 +1,8 @@
 import { EditorView } from '@codemirror/view'
+import type { Extension } from '@codemirror/state'
+import type { AccentColor } from './types'
 
-export function accentEditorTheme(accent) {
+export function accentEditorTheme(accent: AccentColor): Extension {
   return EditorView.theme({
     '& .cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground':
       {

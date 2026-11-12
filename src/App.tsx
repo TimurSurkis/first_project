@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, Dispatch, SetStateAction } from 'react'
+import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import type { Command } from '@codemirror/view'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -7,24 +10,35 @@ import {
 	LuPanelLeft,
 	LuPenLine,
 } from 'react-icons/lu'
-import IconButton from './IconButton.jsx'
-import StatusBar from './StatusBar.jsx'
-import FormatToolbar from './FormatToolbar.jsx'
-import SettingsDialog from './SettingsDialog.jsx'
-import Sidebar from './Sidebar.jsx'
-import DocumentEditor from './DocumentEditor.jsx'
-import I18nProvider from './i18n/I18nProvider.jsx'
-import { useTranslation } from './i18n/context.js'
-import { createMarkdownKeymap } from './markdownCommands.js'
-import { findLanguage } from './languages.js'
-import { loadSettings, saveSettings } from './settings.js'
+import IconButton from './IconButton.tsx'
+import StatusBar from './StatusBar.tsx'
+import FormatToolbar from './FormatToolbar.tsx'
+import SettingsDialog from './SettingsDialog.tsx'
+import Sidebar from './Sidebar.tsx'
+import DocumentEditor from './DocumentEditor.tsx'
+import I18nProvider from './i18n/I18nProvider.tsx'
+import { useTranslation } from './i18n/context.ts'
+import { createMarkdownKeymap } from './markdownCommands.ts'
+import { findLanguage } from './languages.ts'
+import { loadSettings, saveSettings } from './settings.ts'
+import type {
+	DocumentId,
+	DocumentPatch,
+	EditorDocument,
+	EditorSettings,
+	NewDocumentFields,
+	SettingsPatch,
+	TabsState,
+	Translate,
+	ViewMode,
+} from './types'
 import './App.css'
 
 const api = window.api
 
 let nextDocumentId = 1
 
-function createDocument(fields) {
+function createDocument(fields: NewDocumentFields): EditorDocument {
 	return {
 		id: nextDocumentId++,
 		text: '',
@@ -36,15 +50,15 @@ function createDocument(fields) {
 	}
 }
 
-function getBaseName(filePath) {
-	return filePath.split(/[\\/]/).pop()
+function getBaseName(filePath: string): string {
+	return filePath.split(/[\\/]/).pop() ?? filePath
 }
 
-function isMarkdownFile(name) {
+function isMarkdownFile(name: string): boolean {
 	return /\.md$/i.test(name)
 }
 
-function normalizeFileName(input, t) {
+function normalizeFileName(input: string, t: Translate): string | null {
 	const name = input.trim()
 	if (!name) return null
 	if (/[\\/:*?"<>|]/.test(name)) {
@@ -54,7 +68,7 @@ function normalizeFileName(input, t) {
 	return /\.[^./\\]+$/.test(name) ? name : `${name}.txt`
 }
 
-function nextUntitledName(docs, t) {
+function nextUntitledName(docs: EditorDocument[], t: Translate): string {
 	const base = t('doc.untitled')
 	const names = new Set(docs.map((item) => item.docName))
 	if (!names.has(`${base}.txt`)) return `${base}.txt`
@@ -64,7 +78,7 @@ function nextUntitledName(docs, t) {
 	return `${base} ${index}.txt`
 }
 
-function syncScroll(from, to) {
+function syncScroll(from: HTMLElement, to: HTMLElement): void {
 	const fromMax = from.scrollHeight - from.clientHeight
 	const toMax = to.scrollHeight - to.clientHeight
 	if (fromMax <= 0 || toMax <= 0) return
@@ -73,19 +87,24 @@ function syncScroll(from, to) {
 	if (Math.abs(to.scrollTop - target) > 1) to.scrollTop = target
 }
 
-function Editor({ settings, setSettings }) {
+interface EditorProps {
+	settings: EditorSettings
+	setSettings: Dispatch<SetStateAction<EditorSettings>>
+}
+
+function Editor({ settings, setSettings }: EditorProps) {
 	const { t } = useTranslation()
-	const [tabs, setTabs] = useState(() => {
+	const [tabs, setTabs] = useState<TabsState>(() => {
 		const first = createDocument({ docName: nextUntitledName([], t) })
 		return { docs: [first], activeId: first.id }
 	})
 	const [showSettings, setShowSettings] = useState(false)
 
-	const editorRefs = useRef({})
-	const previewRef = useRef(null)
+	const editorRefs = useRef<Record<DocumentId, ReactCodeMirrorRef | null>>({})
+	const previewRef = useRef<HTMLDivElement>(null)
 
 	const { docs, activeId } = tabs
-	const doc = docs.find((item) => item.id === activeId)
+	const doc = docs.find((item) => item.id === activeId)!
 
 	const isMarkdown = isMarkdownFile(doc.docName)
 	const currentMode = isMarkdown ? doc.mode : 'edit'
@@ -93,7 +112,7 @@ function Editor({ settings, setSettings }) {
 	const showPreview = currentMode !== 'edit'
 	const isSplit = currentMode === 'split'
 
-	const modes = [
+	const modes: { id: ViewMode; label: string; icon: typeof LuPenLine }[] = [
 		{ id: 'edit', label: t('mode.edit'), icon: LuPenLine },
 		{ id: 'split', label: t('mode.split'), icon: LuColumns2 },
 		{ id: 'preview', label: t('mode.preview'), icon: LuEye },
@@ -106,7 +125,7 @@ function Editor({ settings, setSettings }) {
 			? t('status.plainText')
 			: docLanguage.name
 
-	const updateDocument = useCallback((id, patch) => {
+	const updateDocument = useCallback((id: DocumentId, patch: DocumentPatch) => {
 		setTabs((current) => ({
 			...current,
 			docs: current.docs.map((item) =>
@@ -116,29 +135,29 @@ function Editor({ settings, setSettings }) {
 	}, [])
 
 	const handleTextChange = useCallback(
-		(id, text) => updateDocument(id, { text }),
+		(id: DocumentId, text: string) => updateDocument(id, { text }),
 		[updateDocument],
 	)
 	const handleCursorChange = useCallback(
-		(id, cursor) => updateDocument(id, { cursor }),
+		(id: DocumentId, cursor: EditorDocument['cursor']) => updateDocument(id, { cursor }),
 		[updateDocument],
 	)
-	const registerEditor = useCallback((id, node) => {
+	const registerEditor = useCallback((id: DocumentId, node: ReactCodeMirrorRef | null) => {
 		editorRefs.current[id] = node
 	}, [])
 
-	function runFormat(command) {
+	function runFormat(command: Command): void {
 		const view = editorRefs.current[doc.id]?.view
 		if (!view) return
 		command(view)
 		view.focus()
 	}
 
-	function setMode(mode) {
+	function setMode(mode: ViewMode): void {
 		updateDocument(doc.id, { mode })
 	}
 
-	function newFile() {
+	function newFile(): void {
 		setTabs((current) => {
 			const next = createDocument({
 				docName: nextUntitledName(current.docs, t),
@@ -147,11 +166,11 @@ function Editor({ settings, setSettings }) {
 		})
 	}
 
-	function activateDocument(id) {
+	function activateDocument(id: DocumentId): void {
 		setTabs((current) => ({ ...current, activeId: id }))
 	}
 
-	function cycleDocument(step) {
+	function cycleDocument(step: number): void {
 		setTabs((current) => {
 			const index = current.docs.findIndex(
 				(item) => item.id === current.activeId,
@@ -160,11 +179,12 @@ function Editor({ settings, setSettings }) {
 				current.docs[
 					(index + step + current.docs.length) % current.docs.length
 				]
+			if (!next) return current
 			return { ...current, activeId: next.id }
 		})
 	}
 
-	function closeDocument(id) {
+	function closeDocument(id: DocumentId): void {
 		const target = docs.find((item) => item.id === id)
 		if (!target) return
 		if (
@@ -185,15 +205,16 @@ function Editor({ settings, setSettings }) {
 			}
 			if (current.activeId !== id) return { ...current, docs: remaining }
 			const nextActive = remaining[Math.min(index, remaining.length - 1)]
+			if (!nextActive) return current
 			return { docs: remaining, activeId: nextActive.id }
 		})
 	}
 
-	async function openFile() {
+	async function openFile(): Promise<void> {
 		const file = await api.openFile()
 		if (!file) return
 
-		if (file.imported) {
+		if (file.imported === true) {
 			setTabs((current) => {
 				const next = createDocument({ docName: file.name, text: file.content, savedText: '' })
 				return { docs: [...current.docs, next], activeId: next.id }
@@ -217,7 +238,7 @@ function Editor({ settings, setSettings }) {
 		})
 	}
 
-	async function saveFile(saveAs = false) {
+	async function saveFile(saveAs = false): Promise<void> {
 		const { id, text: content, filePath, docName } = doc
 		const result = await api.saveFile({
 			content,
@@ -232,7 +253,7 @@ function Editor({ settings, setSettings }) {
 		})
 	}
 
-	async function renameDocument(id, input) {
+	async function renameDocument(id: DocumentId, input: string): Promise<void> {
 		const target = docs.find((item) => item.id === id)
 		if (!target) return
 		const { filePath, docName } = target
@@ -245,7 +266,7 @@ function Editor({ settings, setSettings }) {
 		}
 
 		const result = await api.renameFile({ filePath, newName: name })
-		if (result.error) {
+		if ('error' in result) {
 			window.alert(
 				result.error === 'exists'
 					? t('error.fileExists', { name })
@@ -274,11 +295,11 @@ function Editor({ settings, setSettings }) {
 		api.setLanguage(settings.language)
 	}, [settings])
 
-	function updateSettings(patch) {
+	function updateSettings(patch: SettingsPatch): void {
 		setSettings((current) => ({ ...current, ...patch }))
 	}
 
-	function toggleSidebar() {
+	function toggleSidebar(): void {
 		setSettings((current) => ({
 			...current,
 			sidebarOpen: !current.sidebarOpen,
@@ -286,7 +307,7 @@ function Editor({ settings, setSettings }) {
 	}
 
 	useEffect(() => {
-		const handleKeydown = (event) => {
+		const handleKeydown = (event: KeyboardEvent) => {
 			if ((event.ctrlKey || event.metaKey) && event.key === '\\') {
 				event.preventDefault()
 				setSettings((current) => ({
@@ -379,7 +400,7 @@ function Editor({ settings, setSettings }) {
 						className={`workspace${isSplit ? ' split' : ''}`}
 						style={{
 							'--editor-font-size': `${settings.fontSize}px`,
-						}}
+						} as CSSProperties}
 					>
 						{docs.map((item) => (
 							<DocumentEditor
@@ -420,7 +441,7 @@ function Editor({ settings, setSettings }) {
 }
 
 function App() {
-	const [settings, setSettings] = useState(loadSettings)
+  const [settings, setSettings] = useState<EditorSettings>(loadSettings)
 
 	return (
 		<I18nProvider language={settings.language}>

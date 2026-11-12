@@ -8,17 +8,24 @@ import {
 	LuWrapText,
 	LuX,
 } from 'react-icons/lu'
-import IconButton from './IconButton.jsx'
-import Dropdown from './Dropdown.jsx'
-import { useTranslation } from './i18n/context.js'
-import { LANGUAGES } from './i18n/translate.js'
-import { ACCENT_COLORS, FONT_SIZES, TAB_SIZES, THEMES } from './settings.js'
+import IconButton from './IconButton.tsx'
+import Dropdown from './Dropdown.tsx'
+import { useTranslation } from './i18n/context.ts'
+import { LANGUAGES } from './i18n/translate.ts'
+import { ACCENT_COLORS, FONT_SIZES, TAB_SIZES, THEMES } from './settings.ts'
 import { useEffect, useMemo } from 'react'
+import type { EditorSettings, SettingsPatch } from './types'
 
 const FONT_SIZE_OPTIONS = FONT_SIZES.map((size) => ({ value: size, label: `${size} px` }))
 const TAB_SIZE_OPTIONS = TAB_SIZES.map((size) => ({ value: size, label: String(size) }))
 
-function SettingsDialog({ settings, onChange, onClose }) {
+interface SettingsDialogProps {
+	settings: EditorSettings
+	onChange: (patch: SettingsPatch) => void
+	onClose: () => void
+}
+
+function SettingsDialog({ settings, onChange, onClose }: SettingsDialogProps) {
 	const { t } = useTranslation()
 
 	const themeOptions = useMemo(
@@ -36,7 +43,7 @@ function SettingsDialog({ settings, onChange, onClose }) {
 	)
 
 	useEffect(() => {
-		const handleKeydown = (e) => {
+		const handleKeydown = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') onClose()
 		}
 
