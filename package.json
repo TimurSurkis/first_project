@@ -9,6 +9,7 @@
 		"build": "npm run typecheck && vite build && npm run build:electron",
 		"start": "npm run build && electron . --enable-features=UseOzonePlatform --ozone-platform=x11",
 		"lint": "oxlint",
+		"test": "npm run build:electron && node --test tests/*.test.mjs",
 		"typecheck": "tsc --noEmit && npm run typecheck:electron",
 		"typecheck:electron": "tsc -p tsconfig.electron.json --noEmit",
 		"build:electron": "tsc -p tsconfig.electron.json",

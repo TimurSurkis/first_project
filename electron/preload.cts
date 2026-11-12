@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import type {
 	ElectronAPI,
+	ExportHtmlPayload,
 	EventChannelMap,
 	InvokeChannelMap,
 	MenuCommand,
@@ -20,6 +21,10 @@ const api = {
 		ipcRenderer.invoke('file:save', payload) as Promise<
 			InvokeChannelMap['file:save']['result']
 		>,
+	exportHtml: (payload: ExportHtmlPayload) =>
+		ipcRenderer.invoke('file:export-html', payload) as Promise<
+			InvokeChannelMap['file:export-html']['result']
+		>,
 	renameFile: (payload: RenameFilePayload) =>
 		ipcRenderer.invoke('file:rename', payload) as Promise<
 			InvokeChannelMap['file:rename']['result']
@@ -28,6 +33,8 @@ const api = {
 		ipcRenderer.send('doc:dirty', ...args),
 	setLanguage: (...args: SendChannelMap['app:set-language']): void =>
 		ipcRenderer.send('app:set-language', ...args),
+	setCanExportHtml: (...args: SendChannelMap['doc:can-export-html']): void =>
+		ipcRenderer.send('doc:can-export-html', ...args),
 	onMenuCommand: (callback: (command: MenuCommand) => void): Unsubscribe => {
 		const listener = (
 			_event: IpcRendererEvent,

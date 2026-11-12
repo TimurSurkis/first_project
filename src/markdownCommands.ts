@@ -1,4 +1,4 @@
-import { EditorSelection } from '@codemirror/state'
+import { EditorSelection, Prec } from '@codemirror/state'
 import type { Extension } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import type { Command } from '@codemirror/view'
@@ -229,7 +229,8 @@ export function createFormatCommands(t: Translate): FormatCommand[] {
 export function createMarkdownKeymap(t: Translate): Extension {
   const commands = createFormatCommands(t)
 
-  return keymap.of([
+  // Markdown shortcuts must override basicSetup (Mod-i selects a syntax node there).
+  return Prec.high(keymap.of([
 		...commands
 			.filter(
 				(command): command is FormatCommand & { key: string } =>
@@ -240,5 +241,5 @@ export function createMarkdownKeymap(t: Translate): Extension {
       key: `Mod-Alt-${level}`,
 	      run: (view: EditorView) => setHeading(view, level),
     })),
-  ])
+  ]))
 }

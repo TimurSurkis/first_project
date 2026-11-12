@@ -18,6 +18,7 @@
 - `src/App.tsx` — состояние документов и их вкладок, команды меню, просмотр Markdown и синхронизация прокрутки.
 - `src/DocumentEditor.tsx` — React-обёртка CodeMirror, тема, перенос строк, фиксация текста и позиции курсора.
 - `src/markdownCommands.ts` и `src/FormatToolbar.tsx` — команды форматирования и горячие клавиши Markdown.
+- `src/exportHtml.tsx` — экспорт текущего Markdown в полноценный HTML со встроенными стилями через `react-markdown`, `remark-gfm` и `renderToStaticMarkup`. Запись выполняется отдельным IPC-каналом `file:export-html` в main-процессе; состояние исходного документа не меняется.
 - `src/settings.ts` и `src/SettingsDialog.tsx` — типизированные значения параметров и UI настроек. Сохранение настроек производится через `localStorage`.
 - `locales/` и `src/i18n/` — словари и React-интеграция переводов; Electron читает те же словари для системного меню и диалогов.
 - `shared/electron-api.ts` — общий контракт API и IPC-каналов для main, preload и renderer; `src/global.d.ts` объявляет `window.api` для renderer.

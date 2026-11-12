@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import {
 	LuFilePlus,
+	LuFileOutput,
 	LuFolderOpen,
 	LuPanelLeftClose,
 	LuSave,
@@ -22,6 +23,8 @@ interface SidebarProps {
 	onOpen: () => void
 	onSave: () => void
 	onSaveAs: () => void
+	canExportHtml: boolean
+	onExportHtml: () => void
 	onActivate: (id: DocumentId) => void
 	onCloseDocument: (id: DocumentId) => void
 	onRename: (id: DocumentId, name: string) => void
@@ -42,6 +45,8 @@ function Sidebar({
 	onOpen,
 	onSave,
 	onSaveAs,
+	canExportHtml,
+	onExportHtml,
 	onActivate,
 	onCloseDocument,
 	onRename,
@@ -111,6 +116,13 @@ function Sidebar({
 					label={t('toolbar.saveAs')}
 					onClick={onSaveAs}
 				/>
+				{canExportHtml && (
+					<IconButton
+						icon={LuFileOutput}
+						label={t('toolbar.exportHtml')}
+						onClick={onExportHtml}
+					/>
+				)}
 			</div>
 
 			<div className="sidebar-list">

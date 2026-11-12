@@ -21,6 +21,7 @@ npm run dev      # Vite dev-сервер для интерфейса
 npm run build    # сборка интерфейса в dist/
 npm run preview  # предпросмотр собранного интерфейса
 npm run lint     # Oxlint
+npm test         # тесты экспорта HTML и горячих клавиш Markdown (Node.js test runner)
 npm run typecheck # проверка типов renderer и Electron без генерации файлов
 npm run build:electron # компиляция Electron в dist-electron/
 npm run typecheck:electron # проверка типов Electron без генерации файлов

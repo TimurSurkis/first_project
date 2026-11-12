@@ -253,6 +253,19 @@ function Editor({ settings, setSettings }: EditorProps) {
 		})
 	}
 
+	async function exportHtml(): Promise<void> {
+		if (!isMarkdown) return
+		try {
+			const { createHtmlExport } = await import('./exportHtml.tsx')
+			const result = await api.exportHtml(createHtmlExport(doc.text, doc.docName, settings.language))
+			if (result && 'error' in result) {
+				window.alert(`${t('error.exportFailed')}\n${result.error}`)
+			}
+		} catch (error: unknown) {
+			window.alert(`${t('error.exportFailed')}\n${error instanceof Error ? error.message : String(error)}`)
+		}
+	}
+
 	async function renameDocument(id: DocumentId, input: string): Promise<void> {
 		const target = docs.find((item) => item.id === id)
 		if (!target) return
@@ -283,6 +296,10 @@ function Editor({ settings, setSettings }: EditorProps) {
 	useEffect(() => {
 		api.setDirty(docs.some((item) => item.text !== item.savedText))
 	}, [docs])
+
+	useEffect(() => {
+		api.setCanExportHtml(isMarkdown)
+	}, [isMarkdown])
 
 	useEffect(() => {
 		saveSettings(settings)
@@ -327,6 +344,7 @@ function Editor({ settings, setSettings }: EditorProps) {
 			if (command === 'open') openFile()
 			if (command === 'save') saveFile(false)
 			if (command === 'save-as') saveFile(true)
+			if (command === 'export-html') exportHtml()
 			if (command === 'close-tab') closeDocument(doc.id)
 			if (command === 'next-tab') cycleDocument(1)
 			if (command === 'prev-tab') cycleDocument(-1)
@@ -361,6 +379,8 @@ function Editor({ settings, setSettings }: EditorProps) {
 						onOpen={openFile}
 						onSave={() => saveFile(false)}
 						onSaveAs={() => saveFile(true)}
+						canExportHtml={isMarkdown}
+						onExportHtml={exportHtml}
 						onActivate={activateDocument}
 						onCloseDocument={closeDocument}
 						onRename={renameDocument}

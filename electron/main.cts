@@ -6,6 +6,8 @@ import mammoth from 'mammoth'
 import TurndownService from 'turndown'
 import type {
 	Language,
+	ExportHtmlPayload,
+	ExportHtmlResult,
 	MenuCommand,
 	OpenFileResult,
 	RenameFilePayload,
@@ -32,6 +34,7 @@ const MESSAGES = {
 let language: Language = 'ru'
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
+let canExportHtml = false
 
 function t(key: string): string {
 	return MESSAGES[language][key] ?? MESSAGES.en[key] ?? key
@@ -142,6 +145,48 @@ function registerIpcHandlers(): void {
 	)
 
 	handleInvoke(
+		'file:export-html',
+		async (_event, payload: ExportHtmlPayload): Promise<ExportHtmlResult> => {
+			try {
+				if (typeof payload?.content !== 'string' || typeof payload.defaultName !== 'string') {
+					return { error: t('error.invalidExport') }
+				}
+				const { canceled, filePath: chosenPath } = await dialog.showSaveDialog(
+					getMainWindow(),
+					{
+						title: t('dialog.exportHtml'),
+						defaultPath: payload.defaultName,
+						filters: [{ name: t('dialog.htmlFiles'), extensions: ['html'] }],
+						properties: ['showOverwriteConfirmation'],
+					},
+				)
+				if (canceled || !chosenPath) return null
+
+				const target = /\.html$/i.test(chosenPath) ? chosenPath : `${chosenPath}.html`
+				// The native dialog only checks chosenPath, not an appended extension.
+				if (target !== chosenPath) {
+					const exists = await fs.access(target).then(() => true, () => false)
+					if (exists) {
+						const { response } = await dialog.showMessageBox(getMainWindow(), {
+							type: 'warning',
+							buttons: [t('dialog.cancel'), t('dialog.replace')],
+							defaultId: 0,
+							cancelId: 0,
+							message: t('dialog.replaceFile'),
+							detail: target,
+						})
+						if (response !== 1) return null
+					}
+				}
+				await fs.writeFile(target, payload.content, 'utf8')
+				return { filePath: target }
+			} catch (error: unknown) {
+				return { error: error instanceof Error ? error.message : String(error) }
+			}
+		},
+	)
+
+	handleInvoke(
 		'file:rename',
 		async (_event, { filePath, newName }: RenameFilePayload): Promise<RenameFileResult> => {
 			const target = path.join(path.dirname(filePath), newName)
@@ -164,6 +209,13 @@ function registerIpcHandlers(): void {
 
 	handleSend('doc:dirty', (_event, dirty: boolean) => {
 		if (typeof dirty === 'boolean') hasUnsavedChanges = dirty
+	})
+
+	handleSend('doc:can-export-html', (_event, enabled: boolean) => {
+		if (typeof enabled !== 'boolean') return
+		canExportHtml = enabled
+		const item = Menu.getApplicationMenu()?.getMenuItemById('export-html')
+		if (item) item.enabled = enabled
 	})
 
 	handleSend('app:set-language', (_event, nextLanguage: Language) => {
@@ -202,6 +254,12 @@ function buildMenu(): Electron.Menu {
 					label: t('menu.saveAs'),
 					accelerator: 'CmdOrCtrl+Shift+S',
 					click: sendCommand('save-as'),
+				},
+				{
+					id: 'export-html',
+					label: t('menu.exportHtml'),
+					enabled: canExportHtml,
+					click: sendCommand('export-html'),
 				},
 				{ type: 'separator' },
 				{
