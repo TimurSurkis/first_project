@@ -574,3 +574,28 @@
 	background: var(--surface);
 	border-right: 1px solid var(--border);
 }
+
+.cloud-empty { display: flex; flex: 1; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+.app-main .cloud-empty { min-height: 0; }
+.cloud-empty h1 { font-size: 22px; }
+.cloud-empty p { color: var(--muted); }
+.cloud-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.cloud-notice span { flex: 1; }
+.cloud-error { color: #bf4135; overflow-wrap: anywhere; }
+.conflict { border-left: 3px solid #d78c20; }
+.cloud-actions { display: flex; gap: 8px; margin-top: 12px; }
+.cloud-file-list { max-height: 55vh; overflow: auto; }
+.cloud-file { display: flex; gap: 8px; padding: 10px 0; align-items: center; border-bottom: 1px solid var(--border); }
+.cloud-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-library { width: min(700px, 92vw); }
+.auth-backdrop { z-index: 100; }
+.auth-dialog { max-width: 92vw; }
+.auth-dialog label { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+.auth-dialog input { padding: 9px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--control-bg); color: var(--fg); font: inherit; }
+.auth-dialog p { color: var(--muted); }
+.auth-dialog .cloud-error { color: #bf4135; }
+.auth-dialog button { margin-right: 8px; margin-bottom: 8px; }
+.sidebar-account { padding: 8px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.dialog-backdrop { z-index: 20; }
+.cloud-notice button, .cloud-empty button, .file-library button, .auth-dialog button { cursor: pointer; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--control-bg); color: var(--fg); font: inherit; }
+button:disabled { opacity: .5; cursor: default; }

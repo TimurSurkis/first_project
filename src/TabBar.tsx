@@ -5,7 +5,7 @@ import type { DocumentId, EditorDocument } from './types'
 
 interface TabBarProps {
 	docs: EditorDocument[]
-	activeId: DocumentId
+	activeId: DocumentId | null
 	onActivate: (id: DocumentId) => void
 	onClose: (id: DocumentId) => void
 	onRename: (id: DocumentId, name: string) => void
@@ -53,7 +53,7 @@ function TabBar({ docs, activeId, onActivate, onClose, onRename }: TabBarProps) 
 		>
 			{docs.map((doc) => {
 				const active = doc.id === activeId
-				const dirty = doc.text !== doc.savedText
+				const dirty = doc.text !== doc.savedText || doc.docName !== doc.savedName
 				return (
 					<div
 						key={doc.id}

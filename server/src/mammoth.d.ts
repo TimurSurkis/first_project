@@ -5,7 +5,7 @@ declare module 'mammoth' {
 
 	interface MammothApi {
 		convertToHtml(
-			input: { path: string },
+			input: { path: string } | { buffer: Buffer },
 			options?: {
 				convertImage?: (image: MammothImage) => Promise<{ src: string }>
 			},

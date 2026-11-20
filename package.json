@@ -4,13 +4,27 @@
 	"version": "0.0.0",
 	"type": "module",
 	"main": "dist-electron/electron/main.cjs",
+	"engines": {
+		"node": ">=22.16.0"
+	},
+	"overrides": {
+		"sequelize": {
+			"uuid": "^11.1.1"
+		}
+	},
 	"scripts": {
 		"dev": "vite",
-		"build": "npm run typecheck && vite build && npm run build:electron",
-		"start": "npm run build && electron . --enable-features=UseOzonePlatform --ozone-platform=x11",
+		"build": "npm run typecheck && vite build && npm run build:server && npm run build:electron",
+		"start": "node --env-file-if-exists=.env dist-server/server/src/index.js",
+		"dev:server": "tsx watch server/src/index.ts",
+		"db:migrate": "tsx server/src/migrate.ts",
+		"db:migrate:production": "node --env-file-if-exists=.env dist-server/server/src/migrate.js",
+		"build:server": "tsc -p tsconfig.server.json",
+		"electron": "node --env-file-if-exists=.env node_modules/electron/cli.js . --enable-features=UseOzonePlatform --ozone-platform=x11",
 		"lint": "oxlint",
-		"test": "npm run build:electron && node --test tests/*.test.mjs",
-		"typecheck": "tsc --noEmit && npm run typecheck:electron",
+		"test": "npm run build:electron && node --import tsx --test tests/*.test.mjs server/tests/*.test.ts",
+		"test:integration": "node --import tsx --test server/tests/integration.test.ts",
+		"typecheck": "tsc --noEmit && npm run typecheck:electron && tsc -p tsconfig.server.json --noEmit",
 		"typecheck:electron": "tsc -p tsconfig.electron.json --noEmit",
 		"build:electron": "tsc -p tsconfig.electron.json",
 		"preview": "vite preview"
@@ -26,22 +40,40 @@
 		"@codemirror/state": "^6.7.6",
 		"@codemirror/view": "^6.43.15",
 		"@uiw/react-codemirror": "^4.25.12",
+		"cookie-parser": "^1.4.7",
+		"dotenv": "^18.0.10",
+		"express": "^5.3.0",
+		"express-rate-limit": "^8.7.4",
+		"helmet": "^8.3.0",
 		"mammoth": "^1.13.0",
+		"multer": "^2.5.0",
+		"mysql2": "^3.24.6",
 		"react": "^19.3.1",
 		"react-dom": "^19.3.1",
 		"react-icons": "^5.7.0",
 		"react-markdown": "^10.1.0",
 		"remark-gfm": "^4.0.1",
-		"turndown": "^7.2.5"
+		"sequelize": "^6.37.8",
+		"turndown": "^7.2.5",
+		"umzug": "^3.8.3",
+		"yauzl": "^3.4.0",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
+		"@types/cookie-parser": "^1.4.10",
+		"@types/express": "^5.0.6",
+		"@types/multer": "^2.3.0",
 		"@types/node": "^26.6.6",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
+		"@types/supertest": "^7.2.1",
 		"@types/turndown": "^5.0.6",
+		"@types/yauzl": "^3.4.0",
 		"@vitejs/plugin-react": "^6.1.2",
 		"electron": "^45.2.1",
 		"oxlint": "^1.89.0",
+		"supertest": "^7.3.2",
+		"tsx": "^4.23.15",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.5"
 	}

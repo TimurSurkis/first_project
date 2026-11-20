@@ -1,72 +1,238 @@
-# Разработка и запуск
+# Разработка и развёртывание без Docker
 
 ## Требования
 
-- Node.js (рекомендуется LTS).
-- npm.
+- Node.js 22.16+ (рекомендуется актуальная LTS) и npm.
+- MySQL 8+ как обычная системная служба.
+- Для десктопной оболочки — окружение, поддерживаемое Electron.
 
-## Установка и команды
+Docker, контейнеры и глобальный Sequelize CLI не нужны.
 
-Из корня проекта выполните:
+## 1. MySQL
+
+На Ubuntu / Debian, если MySQL ещё не установлен:
+
+```bash
+sudo apt update
+sudo apt install mysql-server
+sudo systemctl enable --now mysql
+sudo mysql
+```
+
+В административной консоли MySQL выполните (пароль замените своим):
+
+```sql
+CREATE DATABASE text_editor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'text_editor'@'127.0.0.1' IDENTIFIED BY 'replace-with-a-strong-password';
+GRANT ALL PRIVILEGES ON text_editor.* TO 'text_editor'@'127.0.0.1';
+```
+
+Приложение подключается по TCP к `127.0.0.1`, не под root и не через системную socket-аутентификацию.
+MySQL не нужно публиковать в интернет. В production желательно разделить пользователя миграций
+с DDL-правами и runtime-пользователя с SELECT / INSERT / UPDATE / DELETE.
+
+## 2. Конфигурация
 
 ```bash
 npm install
+cp .env.example .env
+```
+
+Отредактируйте `.env`, прежде всего DB_PASSWORD. Файл исключён из Git.
+Значения по умолчанию в примере рассчитаны на Vite:
+
+```dotenv
+NODE_ENV=development
+HOST=127.0.0.1
+PORT=3000
+APP_ORIGIN=http://localhost:5173
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=text_editor
+DB_USER=text_editor
+DB_PASSWORD=your-password
+EDITOR_URL=http://localhost:5173
+```
+
+`APP_ORIGIN` — точный адрес, который видит браузер, без завершающего `/` и пути.
+Не смешивайте `localhost` и `127.0.0.1` в адресах фронтенда: это разные origin и cookie.
+DB_* используются только сервером и никогда не передаются в Vite через VITE_*.
+
+## 3. Миграции
+
+```bash
+npm run db:migrate
+```
+
+Миграции применяются отдельно от старта приложения. Повторный запуск пропускает уже выполненные.
+Запускайте миграции одним процессом, предварительно делая backup при обновлении рабочей базы.
+MySQL DDL не является одной откатываемой транзакцией: при сбое миграции сначала выясните состояние
+таблиц, не удаляйте рабочую базу и не используйте `sync({ force: true })` / `alter: true`.
+
+## 4. Разработка
+
+В первом терминале:
+
+```bash
+npm run dev:server
+```
+
+Во втором:
+
+```bash
+npm run dev
+```
+
+Браузер: **http://localhost:5173**. Vite проксирует `/api` на `127.0.0.1:3000`.
+Порт API фиксирован в `vite.config.ts`; при изменении PORT обновите proxy target.
+
+Дополнительно, в третьем терминале:
+
+```bash
+npm run build:electron
+npm run electron
+```
+
+Electron читает EDITOR_URL из `.env` и загружает тот же серверный фронтенд.
+В браузере некоторые системные сочетания (например Ctrl+N / Ctrl+W) могут перехватываться браузером;
+действия всегда доступны кнопками интерфейса. В Electron используются нативные accelerators.
+
+## 5. Проверка собранного приложения локально
+
+В `.env` измените:
+
+```dotenv
+APP_ORIGIN=http://localhost:3000
+EDITOR_URL=http://localhost:3000
+```
+
+```bash
+npm run build
 npm start
 ```
 
-`npm start` сначала выполняет production-сборку интерфейса Vite, затем запускает Electron. Для проверки отдельных задач:
+Теперь Express отдаёт и `/api`, и React из `dist/`. Откройте http://localhost:3000
+или запустите `npm run electron`. Vite для этого не нужен.
+`npm run preview` не является полноценным сервером приложения.
+
+## 6. Проверки и интеграционные тесты
 
 ```bash
-npm run dev      # Vite dev-сервер для интерфейса
-npm run build    # проверка типов и production-сборка renderer в dist/ и Electron в dist-electron/
-npm run preview  # предпросмотр собранного интерфейса
-npm run lint     # Oxlint
-npm test         # тесты экспорта HTML и горячих клавиш Markdown (Node.js test runner)
-npm run typecheck # проверка типов renderer и Electron без генерации файлов
-npm run build:electron # компиляция Electron в dist-electron/
-npm run typecheck:electron # проверка типов Electron без генерации файлов
+npm run typecheck
+npm run lint
+npm test
+npm run build
+npm audit
 ```
 
-`npm run dev` запускает только фронтенд Vite; сам по себе он не поднимает Electron. Для полного приложения используйте `npm start`.
+Обычные тесты проверяют парольные хеши, защиту API, очередь сохранений, конфликты,
+неоднозначные сетевые сбои, Markdown, HTML и безопасность Electron без MySQL.
+Интеграционный набор по умолчанию пропущен.
 
-## TypeScript: конфигурация и общие типы
+Для проверки реальных MySQL-запросов создайте **отдельную** базу:
 
-В `tsconfig.json` настроен renderer (React + Vite). Сборку JavaScript выполняет Vite; TypeScript только проверяет типы (`noEmit`). `npm run build` сначала запускает `npm run typecheck`.
+```sql
+CREATE DATABASE text_editor_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON text_editor_test.* TO 'text_editor'@'127.0.0.1';
+```
 
-Основные настройки:
+```bash
+TEST_DB_NAME=text_editor_test npm run test:integration
+```
 
-- `strict: false` оставлен для постепенной миграции; нужные проверки заданы по отдельности: в частности, `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply` и `useUnknownInCatchVariables`.
-- `noUncheckedIndexedAccess` — элемент массива или словаря может отсутствовать; перед использованием нужна проверка.
-- `exactOptionalPropertyTypes` — отсутствие необязательного свойства отличается от явного `undefined`.
-- `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noUnusedLocals`, `noUnusedParameters` — проверки возвратов, веток и неиспользуемого кода.
-- `moduleResolution: "Bundler"`, `module: "ESNext"`, `jsx: "react-jsx"`, `isolatedModules` и `verbatimModuleSyntax` — режим для Vite и React. Типы импортируются через `import type`.
-- `resolveJsonModule` — типизированные импорты словарей переводов; `types: ["vite/client"]` — типы CSS, ресурсов и `import.meta.env` без автоматического подключения Node.js globals к renderer.
-- `skipLibCheck` — пропуск внутренней проверки деклараций зависимостей, но не собственного `.ts/.tsx`-кода.
+Остальные DB_* читаются из `.env`. Тесты требуют имя с суффиксом `_test`, применяют миграции,
+создают уникальные тестовые аккаунты и удаляют только свои записи. Рабочую базу не используйте.
 
-Renderer (`src/`), конфигурация Vite и Electron main/preload переведены на TypeScript. `tsconfig.json` проверяет renderer и `vite.config.ts`; `tsconfig.electron.json` проверяет Electron с NodeNext и CommonJS-выходом из `.cts` в `.cjs`. `npm run build` проверяет типы обеих частей, собирает renderer и компилирует Electron. `npm start` запускает скомпилированный main из `dist-electron/electron/main.cjs`. `allowJs: true` оставлен для постепенного перехода оставшихся конфигурационных файлов; `checkJs: false` не проверяет JavaScript.
+Sequelize 6 использует устаревший uuid; в package.json зафиксирован override на совместимую
+CommonJS-версию uuid 11 с исправлением advisory GHSA-w5hq-g745-h8pq. Не применяйте
+предлагаемый npm audit откат Sequelize на старую major-версию.
 
-Общие контракты:
+## 7. Рабочий сервер
 
-- `src/types.ts` — `EditorDocument`, `TabsState`, `CursorPosition`, `EditorSettings`, режимы просмотра, команды форматирования, варианты Dropdown и типы переводов. `TranslationKey` выводится из английского словаря.
-- `shared/electron-api.ts` — параметры/результаты файловых операций, команды меню, `ElectronAPI` и типы IPC-каналов. Результаты открытия различают импорт DOCX и обычный файл; отмена диалога возвращает `null`.
-- `src/global.d.ts` — объявление `window.api` для renderer. Сам API создаётся в `electron/preload.cts` и экспортируется через `contextBridge`.
+Установите Node.js и MySQL, создайте базу / пользователя, разместите проект, например в `/srv/text-editor`.
+Установите зависимости, соберите проект и задайте:
 
-Например, при переносе компонента можно импортировать `EditorDocument` из `./types` через `import type`. Для обновлений настроек и документа предусмотрены `SettingsPatch` и `DocumentPatch`. Числовые диапазоны (например, ширина панели), данные из `localStorage` и входящие IPC-данные всё равно требуют проверок во время выполнения: TypeScript не валидирует их автоматически.
+```dotenv
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=3000
+APP_ORIGIN=https://editor.example.com
+EDITOR_URL=https://editor.example.com
+# DB_* — реальные параметры MySQL
+```
 
-Основания для конфигурации: [TypeScript TSConfig Reference](https://www.typescriptlang.org/tsconfig/) и [TypeScript в Vite](https://vite.dev/guide/features.html#typescript).
+```bash
+npm ci
+npm run build
+npm run db:migrate:production
+```
 
-## Где менять функциональность
+Пример unit-файла `/etc/systemd/system/text-editor.service`
+(создание пользователя text-editor и права на каталог настраиваются администратором):
 
-- Интерфейс и состояние вкладок: `src/App.tsx` и компоненты `.tsx` в `src/`.
-- Команды Markdown и keymap: `src/markdownCommands.ts`.
-- Языки подсветки по расширению: `src/languages.ts`.
-- Настройки: `src/settings.ts`, `src/SettingsDialog.tsx`.
-- Переводы интерфейса и системных меню: `locales/ru.json`, `locales/en.json`.
-- Операции с файлами, диалоги и меню Electron: `electron/main.cts`.
-- Ограниченный мост IPC для renderer: `electron/preload.cts`.
+```ini
+[Unit]
+Description=Text Editor server
+After=network.target mysql.service
 
-После изменения интерфейса проверьте `npm run lint` и `npm run build`. Проверяйте операции открытия/сохранения и предупреждения о несохранённых изменениях в запущенном Electron через `npm start`.
+[Service]
+Type=simple
+User=text-editor
+WorkingDirectory=/srv/text-editor
+EnvironmentFile=/srv/text-editor/.env
+ExecStart=/usr/bin/node /srv/text-editor/dist-server/server/src/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
 
-## Ограничения сборки
+[Install]
+WantedBy=multi-user.target
+```
 
-В проекте настроена сборка фронтенда, но нет конфигурации для выпуска установщиков (`.exe`, `.dmg`, `.deb`). `dist/` содержит собранный renderer, это не установочный пакет приложения.
+Уточните путь к Node через `command -v node`. `.env` должен читаться только владельцем службы.
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now text-editor
+sudo journalctl -u text-editor -f
+```
+
+Пример Caddyfile при настроенном DNS домена:
+
+```caddyfile
+editor.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+Caddy получает TLS-сертификат; наружу открыты только HTTPS / HTTP для редиректа и выдачи сертификата.
+Express доверяет forwarded-заголовкам только от loopback-прокси.
+В production HTTP в APP_ORIGIN не допускается, сессионная cookie всегда Secure.
+Десктопный клиент должен получить тот же HTTPS-адрес в своём EDITOR_URL.
+
+## 8. Резервные копии
+
+Пример (запускается администратором, пароль вводится интерактивно):
+
+```bash
+mysqldump --single-transaction --no-tablespaces --set-gtid-purged=OFF -h 127.0.0.1 -u text_editor -p text_editor > backup.sql
+```
+
+Храните резервные копии вне сервера с ограниченным доступом. Проверяйте восстановление в отдельную базу:
+
+```bash
+mysql -h 127.0.0.1 -u restore_user -p restore_database < backup.sql
+```
+
+Backup содержит пользовательские документы, хеши паролей и сессионные метаданные;
+его нужно защищать как саму базу. Корзина и номера версий не заменяют резервное копирование.
+
+## Сборки
+
+- `dist/`: фронтенд Vite.
+- `dist-server/`: Express, миграции и shared-типы.
+- `dist-electron/`: main / preload Electron.
+
+Запуск production-команд выполняется из корня проекта: от него зависят путь `.env` и `dist/`.
+Установщики Electron пока не настроены.

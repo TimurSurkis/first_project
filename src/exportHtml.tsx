@@ -36,7 +36,7 @@ export function createHtmlExport(
 	docName: string,
 	language: Language,
 ): ExportHtmlPayload {
-	const title = docName.replace(/\.md$/i, '')
+	const title = docName.replace(/\.(?:md|markdown)$/i, '')
 	const html = renderToStaticMarkup(
 		<html lang={language}>
 			<head>

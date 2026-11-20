@@ -7,6 +7,10 @@ import {
 	LuSave,
 	LuSaveAll,
 	LuSettings,
+	LuTrash2,
+	LuDownload,
+	LuLogOut,
+	LuUpload,
 } from 'react-icons/lu'
 import IconButton from './IconButton.tsx'
 import TabBar from './TabBar.tsx'
@@ -18,11 +22,16 @@ import type { DocumentId, EditorDocument } from './types'
 interface SidebarProps {
 	width: number
 	docs: EditorDocument[]
-	activeId: DocumentId
+	activeId: DocumentId | null
 	onNew: () => void
 	onOpen: () => void
 	onSave: () => void
 	onSaveAs: () => void
+	onImport: () => void
+	onDownload: () => void
+	onTrash: () => void
+	email: string
+	onLogout: () => void
 	canExportHtml: boolean
 	onExportHtml: () => void
 	onActivate: (id: DocumentId) => void
@@ -45,6 +54,11 @@ function Sidebar({
 	onOpen,
 	onSave,
 	onSaveAs,
+	onImport,
+	onDownload,
+	onTrash,
+	email,
+	onLogout,
 	canExportHtml,
 	onExportHtml,
 	onActivate,
@@ -103,7 +117,7 @@ function Sidebar({
 				/>
 				<IconButton
 					icon={LuFolderOpen}
-					label={t('toolbar.open')}
+					label={t('cloud.allFiles')}
 					onClick={onOpen}
 				/>
 				<IconButton
@@ -113,9 +127,12 @@ function Sidebar({
 				/>
 				<IconButton
 					icon={LuSaveAll}
-					label={t('toolbar.saveAs')}
+					label={t('cloud.saveCopy')}
 					onClick={onSaveAs}
 				/>
+				<IconButton icon={LuTrash2} label={t('cloud.trash')} onClick={onTrash} />
+				<IconButton icon={LuUpload} label={t('cloud.import')} onClick={onImport} />
+				<IconButton icon={LuDownload} label={t('cloud.download')} onClick={onDownload} />
 				{canExportHtml && (
 					<IconButton
 						icon={LuFileOutput}
@@ -137,6 +154,8 @@ function Sidebar({
 			</div>
 
 			<div className="sidebar-footer">
+				<div className="sidebar-account" title={email}>{email}</div>
+				<IconButton icon={LuLogOut} label={t('auth.logout')} onClick={onLogout} />
 				<IconButton
 					icon={LuSettings}
 					label={t('toolbar.settings')}

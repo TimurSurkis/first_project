@@ -2,6 +2,6 @@ import type { ElectronAPI } from '../shared/electron-api'
 
 declare global {
   interface Window {
-    readonly api: ElectronAPI
+    readonly api?: ElectronAPI
   }
 }

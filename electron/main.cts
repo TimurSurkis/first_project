@@ -1,337 +1,117 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron'
-import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron'
-import { promises as fs } from 'node:fs'
+import type { IpcMainEvent } from 'electron'
 import path from 'node:path'
-import mammoth from 'mammoth'
-import TurndownService from 'turndown'
-import type {
-	Language,
-	ExportHtmlPayload,
-	ExportHtmlResult,
-	MenuCommand,
-	OpenFileResult,
-	RenameFilePayload,
-	RenameFileResult,
-	SaveFilePayload,
-	SaveFileResult,
-	InvokeChannelMap,
-	SendChannelMap,
-} from '../shared/electron-api.js'
-
-const turndown = new TurndownService({
-	headingStyle: 'atx',
-	bulletListMarker: '-',
-	codeBlockStyle: 'fenced',
-})
-turndown.addRule('dropImages', { filter: 'img', replacement: () => '' })
+import type { Language, MenuCommand } from '../shared/electron-api.js'
 
 const appRoot = path.resolve(__dirname, '../..')
-const MESSAGES = {
+const messages = {
 	ru: require(path.join(appRoot, 'locales/ru.json')) as Record<string, string>,
 	en: require(path.join(appRoot, 'locales/en.json')) as Record<string, string>,
-} satisfies Record<Language, Record<string, string>>
+}
+const editorUrl = new URL(process.env.EDITOR_URL ?? 'http://localhost:3000')
+const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(editorUrl.hostname)
+if (editorUrl.username || editorUrl.password || (editorUrl.protocol !== 'https:' && !(editorUrl.protocol === 'http:' && loopback))) {
+	throw new Error('EDITOR_URL must use HTTPS (HTTP is allowed only on loopback for development)')
+}
 
 let language: Language = 'ru'
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
 let canExportHtml = false
+let allowClose = false
 
-function t(key: string): string {
-	return MESSAGES[language][key] ?? MESSAGES.en[key] ?? key
+function t(key: string) { return messages[language][key] ?? messages.en[key] ?? key }
+function trustedUrl(url: string) {
+	try { return new URL(url).origin === editorUrl.origin } catch { return false }
+}
+function trustedSender(event: IpcMainEvent) {
+	return mainWindow !== null && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame && trustedUrl(event.senderFrame.url)
 }
 
-function textFilters(): Electron.FileFilter[] {
-	return [{ name: t('dialog.textFiles'), extensions: ['txt', 'md'] }]
-}
+ipcMain.on('doc:dirty', (event, dirty: unknown) => {
+	if (trustedSender(event) && typeof dirty === 'boolean') hasUnsavedChanges = dirty
+})
+ipcMain.on('doc:can-export-html', (event, enabled: unknown) => {
+	if (!trustedSender(event) || typeof enabled !== 'boolean') return
+	canExportHtml = enabled
+	const item = Menu.getApplicationMenu()?.getMenuItemById('export-html')
+	if (item) item.enabled = enabled
+})
+ipcMain.on('app:set-language', (event, next: unknown) => {
+	if (!trustedSender(event) || (next !== 'ru' && next !== 'en') || next === language) return
+	language = next
+	Menu.setApplicationMenu(buildMenu())
+})
 
-function openFilters(): Electron.FileFilter[] {
-	return [
-		{ name: t('dialog.textFiles'), extensions: ['txt', 'md'] },
-		{ name: t('dialog.wordFiles'), extensions: ['docx'] },
-		{ name: t('dialog.allFiles'), extensions: ['*'] },
-	]
-}
-
-async function importDocx(filePath: string): Promise<string> {
-	const { value: html } = await mammoth.convertToHtml(
-		{ path: filePath },
-		{ convertImage: mammoth.images.imgElement(() => Promise.resolve({ src: '' })) },
-	)
-	return turndown.turndown(html)
-}
-
-function getMainWindow(): BrowserWindow {
-	if (!mainWindow) throw new Error('Main window is not available')
-	return mainWindow
-}
-
-function handleInvoke<K extends keyof InvokeChannelMap>(
-	channel: K,
-	handler: (
-		event: IpcMainInvokeEvent,
-		...args: InvokeChannelMap[K]['args']
-	) => InvokeChannelMap[K]['result'] | Promise<InvokeChannelMap[K]['result']>,
-): void {
-	ipcMain.handle(channel, handler)
-}
-
-function handleSend<K extends keyof SendChannelMap>(
-	channel: K,
-	handler: (event: IpcMainEvent, ...args: SendChannelMap[K]) => void,
-): void {
-	ipcMain.on(channel, handler)
-}
-
-function registerIpcHandlers(): void {
-	handleInvoke('file:open', async (): Promise<OpenFileResult> => {
-		const { canceled, filePaths } = await dialog.showOpenDialog(
-			getMainWindow(),
-			{
-				properties: ['openFile'],
-				filters: openFilters(),
-			},
-		)
-		if (canceled) return null
-
-		const filePath = filePaths[0]
-		if (!filePath) return null
-		const extension = path.extname(filePath).toLowerCase()
-
-		if (extension === '.doc') {
-			await dialog.showMessageBox(getMainWindow(), {
-				type: 'info',
-				message: t('error.docNotSupported'),
-			})
-			return null
-		}
-
-		if (extension === '.docx') {
-			try {
-				const content = await importDocx(filePath)
-				const name = path.basename(filePath, extension) + '.md'
-				return { filePath: null, name, content, imported: true }
-			} catch (error: unknown) {
-				await dialog.showMessageBox(getMainWindow(), {
-					type: 'error',
-					message: t('error.importFailed'),
-					detail: error instanceof Error ? error.message : String(error),
-				})
-				return null
-			}
-		}
-
-		const content = await fs.readFile(filePath, 'utf8')
-		return { filePath, content }
-	})
-
-	handleInvoke(
-		'file:save',
-		async (_event, { content, filePath, defaultName }: SaveFilePayload): Promise<SaveFileResult> => {
-			let target = filePath
-
-			if (!target) {
-				const { canceled, filePath: chosenPath } =
-					await dialog.showSaveDialog(getMainWindow(), {
-						defaultPath: defaultName,
-						filters: textFilters(),
-					})
-				if (canceled || !chosenPath) return null
-				target = chosenPath
-			}
-
-			await fs.writeFile(target, content, 'utf8')
-			return { filePath: target }
-		},
-	)
-
-	handleInvoke(
-		'file:export-html',
-		async (_event, payload: ExportHtmlPayload): Promise<ExportHtmlResult> => {
-			try {
-				if (typeof payload?.content !== 'string' || typeof payload.defaultName !== 'string') {
-					return { error: t('error.invalidExport') }
-				}
-				const { canceled, filePath: chosenPath } = await dialog.showSaveDialog(
-					getMainWindow(),
-					{
-						title: t('dialog.exportHtml'),
-						defaultPath: payload.defaultName,
-						filters: [{ name: t('dialog.htmlFiles'), extensions: ['html'] }],
-						properties: ['showOverwriteConfirmation'],
-					},
-				)
-				if (canceled || !chosenPath) return null
-
-				const target = /\.html$/i.test(chosenPath) ? chosenPath : `${chosenPath}.html`
-				// The native dialog only checks chosenPath, not an appended extension.
-				if (target !== chosenPath) {
-					const exists = await fs.access(target).then(() => true, () => false)
-					if (exists) {
-						const { response } = await dialog.showMessageBox(getMainWindow(), {
-							type: 'warning',
-							buttons: [t('dialog.cancel'), t('dialog.replace')],
-							defaultId: 0,
-							cancelId: 0,
-							message: t('dialog.replaceFile'),
-							detail: target,
-						})
-						if (response !== 1) return null
-					}
-				}
-				await fs.writeFile(target, payload.content, 'utf8')
-				return { filePath: target }
-			} catch (error: unknown) {
-				return { error: error instanceof Error ? error.message : String(error) }
-			}
-		},
-	)
-
-	handleInvoke(
-		'file:rename',
-		async (_event, { filePath, newName }: RenameFilePayload): Promise<RenameFileResult> => {
-			const target = path.join(path.dirname(filePath), newName)
-			if (target === filePath) return { filePath }
-
-			const exists = await fs.access(target).then(
-				() => true,
-				() => false,
-			)
-			if (exists) return { error: 'exists' }
-
-			try {
-				await fs.rename(filePath, target)
-				return { filePath: target }
-			} catch (error: unknown) {
-				return { error: error instanceof Error ? error.message : String(error) }
-			}
-		},
-	)
-
-	handleSend('doc:dirty', (_event, dirty: boolean) => {
-		if (typeof dirty === 'boolean') hasUnsavedChanges = dirty
-	})
-
-	handleSend('doc:can-export-html', (_event, enabled: boolean) => {
-		if (typeof enabled !== 'boolean') return
-		canExportHtml = enabled
-		const item = Menu.getApplicationMenu()?.getMenuItemById('export-html')
-		if (item) item.enabled = enabled
-	})
-
-	handleSend('app:set-language', (_event, nextLanguage: Language) => {
-		if (nextLanguage !== 'ru' && nextLanguage !== 'en') return
-		if (nextLanguage === language) return
-		language = nextLanguage
-		Menu.setApplicationMenu(buildMenu())
-	})
-}
-
-function buildMenu(): Electron.Menu {
-	const sendCommand = (command: MenuCommand) => () =>
-		mainWindow?.webContents.send('menu:command', command)
-
+function buildMenu() {
+	const send = (command: MenuCommand) => () => {
+		if (mainWindow && trustedUrl(mainWindow.webContents.getURL())) mainWindow.webContents.send('menu:command', command)
+	}
 	return Menu.buildFromTemplate([
-		{
-			label: t('menu.file'),
-			submenu: [
-				{
-					label: t('menu.new'),
-					accelerator: 'CmdOrCtrl+N',
-					click: sendCommand('new'),
-				},
-				{
-					label: t('menu.open'),
-					accelerator: 'CmdOrCtrl+O',
-					click: sendCommand('open'),
-				},
-				{ type: 'separator' },
-				{
-					label: t('menu.save'),
-					accelerator: 'CmdOrCtrl+S',
-					click: sendCommand('save'),
-				},
-				{
-					label: t('menu.saveAs'),
-					accelerator: 'CmdOrCtrl+Shift+S',
-					click: sendCommand('save-as'),
-				},
-				{
-					id: 'export-html',
-					label: t('menu.exportHtml'),
-					enabled: canExportHtml,
-					click: sendCommand('export-html'),
-				},
-				{ type: 'separator' },
-				{
-					label: t('menu.closeTab'),
-					accelerator: 'CmdOrCtrl+W',
-					click: sendCommand('close-tab'),
-				},
-				{
-					label: t('menu.nextTab'),
-					accelerator: 'CmdOrCtrl+Tab',
-					click: sendCommand('next-tab'),
-				},
-				{
-					label: t('menu.prevTab'),
-					accelerator: 'CmdOrCtrl+Shift+Tab',
-					click: sendCommand('prev-tab'),
-				},
-				{ type: 'separator' },
-				{ role: 'quit', label: t('menu.quit') },
-			],
-		},
+		{ label: t('menu.file'), submenu: [
+			{ label: t('menu.new'), accelerator: 'CmdOrCtrl+N', click: send('new') },
+			{ label: t('cloud.allFiles'), accelerator: 'CmdOrCtrl+O', click: send('open') },
+			{ type: 'separator' },
+			{ label: t('menu.save'), accelerator: 'CmdOrCtrl+S', click: send('save') },
+			{ label: t('cloud.saveCopy'), accelerator: 'CmdOrCtrl+Shift+S', click: send('save-as') },
+			{ id: 'export-html', label: t('menu.exportHtml'), enabled: canExportHtml, click: send('export-html') },
+			{ type: 'separator' },
+			{ label: t('menu.closeTab'), accelerator: 'CmdOrCtrl+W', click: send('close-tab') },
+			{ label: t('menu.nextTab'), accelerator: 'CmdOrCtrl+Tab', click: send('next-tab') },
+			{ label: t('menu.prevTab'), accelerator: 'CmdOrCtrl+Shift+Tab', click: send('prev-tab') },
+			{ type: 'separator' },
+			{ role: 'quit', label: t('menu.quit') },
+		] },
 		{ role: 'editMenu' },
 	])
 }
 
-function createWindow(): void {
-	const window = new BrowserWindow({
-		width: 1000,
-		height: 700,
-		minWidth: 600,
-		minHeight: 400,
-		webPreferences: {
-			preload: path.join(__dirname, 'preload.cjs'),
-			contextIsolation: true,
-		},
+async function loadEditor(window: BrowserWindow) {
+	try { await window.loadURL(editorUrl.href) }
+	catch {
+		if (window.isDestroyed()) return
+		const { response } = await dialog.showMessageBox(window, {
+			type: 'error', message: t('cloud.serverUnavailable'), detail: editorUrl.origin,
+			buttons: [t('cloud.retry'), t('dialog.cancel')], defaultId: 0, cancelId: 1,
+		})
+		if (response === 0 && !window.isDestroyed()) void loadEditor(window)
+	}
+}
+
+function createWindow() {
+	const window = new BrowserWindow({ width: 1100, height: 750, minWidth: 600, minHeight: 400,
+		webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
 	})
 	mainWindow = window
-
-	void window.loadFile(path.join(appRoot, 'dist', 'index.html'))
-
+	hasUnsavedChanges = false
+	allowClose = false
+	window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+	window.webContents.on('will-navigate', (event, url) => { if (!trustedUrl(url)) event.preventDefault() })
+	window.webContents.on('will-redirect', (event, url) => { if (!trustedUrl(url)) event.preventDefault() })
+	window.webContents.on('will-attach-webview', (event) => event.preventDefault())
+	window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
+	window.webContents.session.setPermissionCheckHandler(() => false)
+	window.webContents.on('will-prevent-unload', (event) => {
+		// Electron's close dialog already obtained explicit permission to discard.
+		if (allowClose) event.preventDefault()
+	})
 	window.on('close', (event) => {
 		if (!hasUnsavedChanges) return
-
 		const choice = dialog.showMessageBoxSync(window, {
-			type: 'warning',
-			buttons: [t('dialog.cancel'), t('dialog.closeWithoutSaving')],
-			defaultId: 0,
-			cancelId: 0,
-			message: t('dialog.unsavedTitle'),
-			detail: t('dialog.unsavedDetail'),
+			type: 'warning', buttons: [t('dialog.cancel'), t('dialog.closeWithoutSaving')], defaultId: 0, cancelId: 0,
+			message: t('dialog.unsavedTitle'), detail: t('dialog.unsavedDetail'),
 		})
 		if (choice === 0) event.preventDefault()
+		else allowClose = true
 	})
-
-	window.on('closed', () => {
-		mainWindow = null
-	})
-
+	window.on('closed', () => { mainWindow = null })
 	Menu.setApplicationMenu(buildMenu())
+	void loadEditor(window)
 }
 
 app.disableHardwareAcceleration()
-
 app.whenReady().then(() => {
-	registerIpcHandlers()
 	createWindow()
-
-	app.on('activate', () => {
-		if (BrowserWindow.getAllWindows().length === 0) createWindow()
-	})
+	app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
-
-app.on('window-all-closed', () => {
-	if (process.platform !== 'darwin') app.quit()
-})
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

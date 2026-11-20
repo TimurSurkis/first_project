@@ -36,14 +36,17 @@ export interface EditorDocument {
   docName: string
   text: string
   savedText: string
-  filePath: string | null
+	savedName: string
+	version: number
+	status: 'saved' | 'dirty' | 'saving' | 'error' | 'conflict'
+	error: string | null
   mode: ViewMode
   cursor: CursorPosition
 }
 
 export interface TabsState {
   docs: EditorDocument[]
-  activeId: DocumentId
+	activeId: DocumentId | null
 }
 
 export type DocumentPatch = Partial<Omit<EditorDocument, 'id'>>
